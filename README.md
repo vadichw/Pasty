@@ -1,6 +1,6 @@
 # Pasty
 
-A menu bar clipboard manager for macOS, inspired by [Maccy](https://github.com/p0deje/Maccy).
+A menu bar clipboard manager for macOS.
 Swift + AppKit + SwiftUI, no external dependencies, macOS 14+.
 
 ## Features
