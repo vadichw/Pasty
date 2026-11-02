@@ -52,6 +52,7 @@ enum PopupAnchor {
 final class PopupController: NSObject, NSWindowDelegate {
     let model: PopupModel
     private let panel = PopupPanel()
+    private let preview = ImagePreview()
     private var keyMonitor: Any?
     private var lastHidden = Date.distantPast
 
@@ -74,6 +75,8 @@ final class PopupController: NSObject, NSWindowDelegate {
             self?.hide()
             self?.onOpenSettings?()
         }
+        model.onPreview = { [weak self] item in self?.showPreview(item) }
+        preview.onClick = { [weak self] in self?.model.closePreview() }
     }
 
     var isVisible: Bool { panel.isVisible }
@@ -98,6 +101,7 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     func hide() {
         guard panel.isVisible else { return }
+        model.closePreview()
         panel.orderOut(nil)
         lastHidden = Date()
         removeKeyMonitor()
@@ -107,11 +111,13 @@ final class PopupController: NSObject, NSWindowDelegate {
     /// Releases the panel and its SwiftUI view tree.
     func tearDown() {
         removeKeyMonitor()
+        preview.tearDown()
         panel.delegate = nil
         panel.orderOut(nil)
         panel.contentView = nil
         model.onSelect = nil
         model.onOpenSettings = nil
+        model.onPreview = nil
     }
 
     func windowDidResignKey(_ notification: Notification) {
@@ -123,6 +129,15 @@ final class PopupController: NSObject, NSWindowDelegate {
         let plain = Prefs.pastePlainByDefault != modifiers.contains(.shift)
         let paste = Prefs.pasteAutomatically != modifiers.contains(.option)
         onSelect?(item, plain, paste)
+    }
+
+    private func showPreview(_ item: ClipItem?) {
+        guard let item else { return preview.hide() }
+        guard let image = model.store.fullImage(for: item) else {
+            NSSound.beep() // the source file and stored data are both unreadable
+            return model.closePreview()
+        }
+        preview.show(image, beside: panel.frame)
     }
 
     // MARK: - Positioning
@@ -179,7 +194,13 @@ final class PopupController: NSObject, NSWindowDelegate {
 
         switch keyCode {
         case kVK_Escape:
-            if model.query.isEmpty { hide() } else { model.query = "" }
+            if model.previewID != nil {
+                model.closePreview()
+            } else if model.query.isEmpty {
+                hide()
+            } else {
+                model.query = ""
+            }
             return true
         case kVK_UpArrow:
             modifiers.contains(.command) ? model.moveToEdge(top: true) : model.move(-1)
@@ -219,6 +240,9 @@ final class PopupController: NSObject, NSWindowDelegate {
         switch keyCode {
         case kVK_ANSI_P:
             model.togglePin()
+            return true
+        case kVK_ANSI_Y:
+            model.togglePreview()
             return true
         case kVK_ANSI_Comma:
             model.onOpenSettings?()

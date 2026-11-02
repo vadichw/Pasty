@@ -17,9 +17,13 @@ final class PopupModel: ObservableObject {
     @Published private(set) var scrollTarget: UUID?
     /// Bumped every time the popup opens to re-focus the search field.
     @Published private(set) var focusToken = 0
+    /// The image item shown in the preview window, if any.
+    @Published private(set) var previewID: UUID?
 
     var onSelect: ((ClipItem, NSEvent.ModifierFlags) -> Void)?
     var onOpenSettings: (() -> Void)?
+    /// Called with the item to preview, or `nil` to close the preview.
+    var onPreview: ((ClipItem?) -> Void)?
 
     private var lastKeyboardNavigation = Date.distantPast
     private var cancellable: AnyCancellable?
@@ -59,6 +63,10 @@ final class PopupModel: ObservableObject {
         selectedID = visible[next].id
         scrollTarget = selectedID
         lastKeyboardNavigation = Date()
+        // Like Quick Look: the open preview follows the keyboard selection.
+        if previewID != nil, let item = selected {
+            item.kind == .image ? showPreview(item) : closePreview()
+        }
     }
 
     func moveToEdge(top: Bool) {
@@ -93,12 +101,34 @@ final class PopupModel: ObservableObject {
         let neighbour = visible.indices.contains(index + 1) ? visible[index + 1]
             : (index > 0 ? visible[index - 1] : nil)
         let wasSelected = item.id == selectedID
+        if item.id == previewID { closePreview() }
         store.remove(item)
         if wasSelected { selectedID = neighbour?.id }
     }
 
     func clear() {
+        closePreview()
         store.clear(keepPinned: true)
+    }
+
+    /// Without an item (⌘Y) toggles the preview of the selected item;
+    /// with one (the eye button) toggles that item's preview.
+    func togglePreview(_ item: ClipItem? = nil) {
+        if previewID != nil, item == nil || item?.id == previewID { return closePreview() }
+        guard let item = item ?? selected, item.kind == .image else { return }
+        showPreview(item)
+    }
+
+    func closePreview() {
+        guard previewID != nil else { return }
+        previewID = nil
+        onPreview?(nil)
+    }
+
+    private func showPreview(_ item: ClipItem) {
+        guard item.id != previewID else { return }
+        previewID = item.id
+        onPreview?(item)
     }
 
     /// App icons come with every resolution up to 1024 px; keep only a 36 px bitmap

@@ -1,5 +1,6 @@
 import AppKit
 import CryptoKit
+import UniformTypeIdentifiers
 
 /// Persists history metadata in `history.json` and the raw pasteboard data of each
 /// item in a separate binary plist (`items/<id>.plist`), loaded only when needed.
@@ -123,6 +124,15 @@ final class HistoryStore: ObservableObject {
     func contents(for item: ClipItem) -> ClipContents? {
         guard let data = try? Data(contentsOf: contentsURL(item.id)) else { return nil }
         return try? PropertyListDecoder().decode(ClipContents.self, from: data)
+    }
+
+    /// Full-size image for the preview: the source file if it still exists,
+    /// otherwise the image data stored with the item.
+    func fullImage(for item: ClipItem) -> NSImage? {
+        if let filePath = item.filePath, let image = NSImage(contentsOfFile: filePath) { return image }
+        guard let first = contents(for: item)?.first else { return nil }
+        let data = first.first { type, _ in UTType(type)?.conforms(to: .image) == true }?.value
+        return data.flatMap(NSImage.init(data:))
     }
 
     func purgeCaches() {

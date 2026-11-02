@@ -13,6 +13,7 @@ Swift + AppKit + SwiftUI, no external dependencies, macOS 14+.
   pause/resume recording, open settings. Any shortcut can be changed or removed.
 - Instant search: type several words in any order.
 - The selected item is pasted straight into the active app (simulated ⌘V).
+- Preview copied images and screenshots at full size: the eye button next to the item, or ⌘Y.
 - Delete any item with the trash button next to it, ⌥⌫, or the context menu.
 - Pin items (⌘P) — pinned items stay on top and survive clearing.
 - Copying the same thing again moves it to the top instead of creating a duplicate.
@@ -50,8 +51,9 @@ Screen recordings are stored as links to the file — if you delete the video, i
 | ⌥↩ | Copy only (no paste) |
 | ⌘1 … ⌘9 | Select item by number |
 | ⌘P | Pin / unpin |
+| ⌘Y | Preview image (also the eye button) |
 | ⌥⌫ | Delete item |
-| ⎋ | Clear search, then close |
+| ⎋ | Close preview, clear search, then close |
 | ⌘, | Settings |
 
 Click the menu bar icon for the history, right-click for the menu (pause, clear, settings, quit).
@@ -67,5 +69,6 @@ Click the menu bar icon for the history, right-click for the menu (pause, clear,
 | `MediaFile.swift` | Image/video detection, thumbnails, video duration |
 | `PopupController.swift` | Non-activating panel: takes keyboard input without stealing focus from the current app |
 | `PopupModel.swift`, `HistoryView.swift` | Search, selection and the SwiftUI list |
+| `ImagePreview.swift` | Full-size image preview window next to the popup |
 | `Paster.swift` | Writes to the clipboard and simulates ⌘V |
 | `SettingsView.swift` | Settings window |

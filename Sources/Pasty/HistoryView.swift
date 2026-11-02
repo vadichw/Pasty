@@ -62,6 +62,8 @@ struct HistoryView: View {
                             isSelected: item.id == model.selectedID,
                             appIcon: model.appIcon(for: item),
                             thumbnail: item.kind == .image || item.kind == .video ? model.store.thumbnail(for: item) : nil,
+                            isPreviewed: item.id == model.previewID,
+                            onPreview: item.kind == .image ? { model.togglePreview(item) } : nil,
                             onDelete: { model.remove(item) }
                         )
                         .id(item.id)
@@ -87,6 +89,9 @@ struct HistoryView: View {
         }
         Button("Copy Only") { model.select(item, modifiers: .option) }
         Divider()
+        if item.kind == .image {
+            Button(item.id == model.previewID ? "Close Preview" : "Preview") { model.togglePreview(item) }
+        }
         if !item.fileURLs.isEmpty {
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(item.fileURLs) }
         }
@@ -123,6 +128,9 @@ struct ClipRow: View {
     let isSelected: Bool
     let appIcon: NSImage?
     let thumbnail: NSImage?
+    let isPreviewed: Bool
+    /// Set for images only; shows the eye button.
+    let onPreview: (() -> Void)?
     let onDelete: () -> Void
 
     var body: some View {
@@ -165,6 +173,17 @@ struct ClipRow: View {
                 Text("⌘\(index + 1)")
                     .font(.system(size: 11).monospacedDigit())
                     .opacity(0.55)
+            }
+            if let onPreview {
+                Button(action: onPreview) {
+                    Image(systemName: isPreviewed ? "eye.fill" : "eye")
+                        .font(.system(size: 11))
+                        .frame(width: 18, height: 18)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .opacity(isSelected || isPreviewed ? 0.9 : 0.4)
+                .help("Preview (⌘Y)")
             }
             Button(action: onDelete) {
                 Image(systemName: "trash")
