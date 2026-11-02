@@ -1,0 +1,30 @@
+name: Release
+
+# Push a version tag to publish a release:  git tag v1.0.0 && git push origin v1.0.0
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release and upload Pasty.dmg
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        run: swift test
+
+      - name: Build Pasty.app for Apple Silicon and Intel
+        run: ./build.sh --universal
+
+      - name: Pack Pasty.dmg
+        run: scripts/make_dmg.sh "${{ github.ref_name }}"
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/Pasty.dmg
+          generate_release_notes: true

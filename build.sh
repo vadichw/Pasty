@@ -1,10 +1,16 @@
 #!/bin/bash
-# Builds Pasty.app into ./build. Pass --install to copy it to /Applications and launch it.
+# Builds Pasty.app into ./build.
+#   --install    also copy it to /Applications and launch it
+#   --universal  build for both Apple Silicon and Intel Macs (used for releases)
 set -euo pipefail
 cd "$(dirname "$0")"
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Pasty"
+ARCH_FLAGS=()
+if [[ " $* " == *" --universal "* ]]; then
+    ARCH_FLAGS=(--arch arm64 --arch x86_64)
+fi
+swift build -c release ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"}
+BIN="$(swift build -c release ${ARCH_FLAGS[@]+"${ARCH_FLAGS[@]}"} --show-bin-path)/Pasty"
 
 APP="build/Pasty.app"
 rm -rf "$APP"
@@ -29,7 +35,7 @@ else
 fi
 echo "Done: $APP"
 
-if [[ "${1:-}" == "--install" ]]; then
+if [[ " $* " == *" --install "* ]]; then
     pkill -x Pasty || true
     rm -rf /Applications/Pasty.app
     cp -R "$APP" /Applications/

@@ -21,12 +21,28 @@ Swift + AppKit + SwiftUI, no external dependencies, macOS 14+.
   you can also ignore specific apps.
 - Pause recording, history size limit, launch at login.
 
+## Download
+
+**[⬇ Download Pasty for Mac](https://github.com/vadichw/Pasty/releases/latest/download/Pasty.dmg)** — macOS 14 or later, Apple Silicon and Intel.
+
+1. Open `Pasty.dmg` and drag **Pasty** onto **Applications**.
+2. Launch Pasty from Applications. The first time, macOS says it can't verify the developer
+   (Pasty isn't notarized by Apple): open **System Settings → Privacy & Security**, scroll down and
+   click **Open Anyway** next to the Pasty message, then confirm. You only do this once.
+3. Pasty appears in the menu bar. Press **⇧⌘C** to open the history.
+
+All versions: [Releases](https://github.com/vadichw/Pasty/releases).
+
 ## Build & install
 
 ```bash
-./build.sh            # builds build/Pasty.app
-./build.sh --install  # also copies it to /Applications and launches it
+./build.sh              # builds build/Pasty.app
+./build.sh --install    # also copies it to /Applications and launches it
+./build.sh --universal  # Apple Silicon + Intel; scripts/make_dmg.sh then packs build/Pasty.dmg
 ```
+
+Releases are built by GitHub Actions: pushing a tag like `v1.0.0` builds, tests and publishes
+`Pasty.dmg` (`.github/workflows/release.yml`).
 
 On first launch macOS asks for **Accessibility** access — it is only needed for automatic
 pasting (⌘V). Without it, selecting an item just copies it to the clipboard.
