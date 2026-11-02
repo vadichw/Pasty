@@ -143,9 +143,10 @@ struct SettingsView: View {
                 ShortcutRow(keys: "⌥↩", action: pasteAutomatically ? "Copy only" : "Copy and paste")
                 ShortcutRow(keys: "⌘1 … ⌘9", action: "Select item by number")
                 ShortcutRow(keys: "⌘P", action: "Pin / unpin")
+                ShortcutRow(keys: "⌘Y", action: "Preview image")
                 ShortcutRow(keys: "⌥⌫", action: "Delete item")
                 ShortcutRow(keys: "↑ ↓  ⌃N ⌃P", action: "Move through the list")
-                ShortcutRow(keys: "⎋", action: "Clear search / close")
+                ShortcutRow(keys: "⎋", action: "Close preview / clear search / close")
             }
         }
         .formStyle(.grouped)
