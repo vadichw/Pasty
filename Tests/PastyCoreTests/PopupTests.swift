@@ -57,6 +57,19 @@ struct PopupModelTests {
         #expect(model.selectedID == c)
     }
 
+    @Test("INV-Popup-12: disk usage is refreshed when the popup opens and after deleting from it")
+    func diskUsageRefresh() {
+        let a = addText(store, "a", contents: [[plainTextType: Data(count: 100_000)]])
+        addText(store, "b", contents: [[plainTextType: Data(count: 100_000)]])
+        model.reset()
+        let full = model.diskBytes
+        #expect(full >= 200_000)
+        model.remove(item(store, a))
+        #expect(model.diskBytes < full)
+        model.clear()
+        #expect(model.diskBytes == store.diskUsage())
+    }
+
     @Test("INV-Popup-4: the selection stops at the first and last rows")
     func moveClamps() {
         let a = addText(store, "a")
@@ -71,19 +84,22 @@ struct PopupModelTests {
         #expect(model.selectedID == c)
     }
 
-    @Test("INV-Popup-5: an open preview follows the selection to images and closes on other items")
+    @Test("INV-Popup-5: an open preview follows the selection to images and videos, and closes on other items")
     func previewFollowsSelection() {
         addText(store, "text")
+        let video = addVideo(store, "recording")
         let second = addImage(store, "second")
-        let first = addImage(store, "first") // visible: first, second, text
+        let first = addImage(store, "first") // visible: first, second, recording, text
         model.reset()
         model.togglePreview()
         #expect(model.previewID == first)
         model.move(1)
         #expect(model.previewID == second)
         model.move(1)
+        #expect(model.previewID == video)
+        model.move(1)
         #expect(model.previewID == nil)
-        #expect(previews == [first, second, nil])
+        #expect(previews == [first, second, video, nil])
     }
 
     @Test("INV-Popup-6: deleting the previewed item closes the preview")
@@ -96,8 +112,9 @@ struct PopupModelTests {
         #expect(previews == [image, nil])
     }
 
-    @Test("INV-Popup-7: only images can be previewed; ⌘Y toggles; the eye button switches or toggles")
+    @Test("INV-Popup-7: only images and videos can be previewed; ⌘Y toggles; the eye button switches or toggles")
     func previewToggling() {
+        let video = addVideo(store, "clip")
         let other = addImage(store, "other")
         let image = addImage(store, "image")
         let text = addText(store, "text") // visible: text, image, other
@@ -116,12 +133,35 @@ struct PopupModelTests {
         model.togglePreview()
         model.togglePreview()
         #expect(model.previewID == nil)
-        #expect(previews == [image, other, nil, image, nil])
+        model.togglePreview(item(store, video))
+        #expect(model.previewID == video)
+        #expect(previews == [image, other, nil, image, nil, video])
+    }
+}
+
+struct ByteSizeTests {
+    @Test("INV-Popup-13: under 1000 bytes in B, from 1000 in KB/MB like Finder")
+    func format() {
+        #expect(ByteSize.format(0) == "0 B")
+        #expect(ByteSize.format(368) == "368 B")
+        #expect(ByteSize.format(999) == "999 B")
+        #expect(ByteSize.format(1000) == ByteCountFormatter.string(fromByteCount: 1000, countStyle: .file))
+        #expect(ByteSize.format(2_100_000).hasSuffix("MB"))
+    }
+}
+
+struct UsageLevelTests {
+    @Test("INV-Popup-11: under 70 % low, 70–90 % medium, from 90 % high", arguments: [
+        (0, 2000, UsageLevel.low), (1399, 2000, .low), (1400, 2000, .medium),
+        (1799, 2000, .medium), (1800, 2000, .high), (2000, 2000, .high), (0, 0, .high),
+    ])
+    func thresholds(used: Int, limit: Int, expected: UsageLevel) {
+        #expect(UsageLevel.of(used: used, limit: limit) == expected)
     }
 }
 
 @MainActor
-struct ImagePreviewTests {
+struct MediaPreviewTests {
     let screen = NSRect(x: 0, y: 0, width: 1440, height: 900)
 
     private func check(_ frame: NSRect, image: NSSize, popup: NSRect, overlapAllowed: Bool) {
@@ -135,21 +175,21 @@ struct ImagePreviewTests {
     func placement() {
         let big = NSSize(width: 2604, height: 1320)
         let leftPopup = NSRect(x: 100, y: 300, width: 420, height: 480)
-        let right = ImagePreview.frame(size: big, beside: leftPopup, in: screen)
+        let right = MediaPreview.frame(size: big, beside: leftPopup, in: screen)
         check(right, image: big, popup: leftPopup, overlapAllowed: false)
         #expect(right.minX > leftPopup.maxX)
 
         let rightPopup = NSRect(x: 1000, y: 300, width: 420, height: 480)
-        let left = ImagePreview.frame(size: big, beside: rightPopup, in: screen)
+        let left = MediaPreview.frame(size: big, beside: rightPopup, in: screen)
         check(left, image: big, popup: rightPopup, overlapAllowed: false)
         #expect(left.maxX < rightPopup.minX)
 
         let small = NSSize(width: 120, height: 80)
-        #expect(ImagePreview.frame(size: small, beside: leftPopup, in: screen).size == small)
+        #expect(MediaPreview.frame(size: small, beside: leftPopup, in: screen).size == small)
 
         let narrowScreen = NSRect(x: 0, y: 0, width: 900, height: 900)
         let middlePopup = NSRect(x: 250, y: 300, width: 420, height: 480) // < 240 pt on both sides
-        let centered = ImagePreview.frame(size: big, beside: middlePopup, in: narrowScreen)
+        let centered = MediaPreview.frame(size: big, beside: middlePopup, in: narrowScreen)
         #expect(narrowScreen.insetBy(dx: 8, dy: 8).contains(centered))
         #expect(abs(centered.midX - narrowScreen.midX) < 1)
     }

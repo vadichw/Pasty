@@ -64,6 +64,15 @@ enum MediaFile {
         return VideoInfo(thumbnail: image.flatMap(pngData), duration: duration)
     }
 
+    /// A video's frame size in pixels, as displayed (rotation applied); nil if it can't be read.
+    static func videoSize(url: URL) async -> NSSize? {
+        let asset = AVURLAsset(url: url)
+        guard let track = try? await asset.loadTracks(withMediaType: .video).first,
+              let (size, transform) = try? await track.load(.naturalSize, .preferredTransform) else { return nil }
+        let rect = CGRect(origin: .zero, size: size).applying(transform)
+        return NSSize(width: abs(rect.width), height: abs(rect.height))
+    }
+
     static func formatDuration(_ seconds: Double) -> String {
         let total = Int(seconds.rounded())
         let h = total / 3600, m = (total % 3600) / 60, s = total % 60

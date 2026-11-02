@@ -1,9 +1,9 @@
 # Popup
 
-Purpose: the history popup — a floating panel with a search field and the list of items — and the image preview window next to it. It lets the user find an item and choose it; what happens next (paste or copy) is up to the App module.
-Depends on: Settings, Storage, Support
+Purpose: the history popup — a floating panel with a search field and the list of items — and the preview window next to it, which shows an image full size or plays a video. It lets the user find an item and choose it; what happens next (paste or copy) is up to the App module.
+Depends on: Capture, Settings, Storage, Support
 
-Flow: `PopupController` owns the panel and the keyboard; `PopupModel` holds search, selection and preview state; `HistoryView` draws the model; `ImagePreview` shows a full-size image. Choosing an item calls `PopupController.onSelect(item, plainText, paste)`, set by the App module.
+Flow: `PopupController` owns the panel and the keyboard; `PopupModel` holds search, selection and preview state; `HistoryView` draws the model; `MediaPreview` shows a full-size image. Choosing an item calls `PopupController.onSelect(item, plainText, paste)`, set by the App module.
 
 The panel takes keyboard input **without activating Pasty**: the app the user was typing in stays frontmost, so the simulated ⌘V lands there.
 
@@ -37,11 +37,11 @@ Side effects: none
 Uses:
 - `PopupModel.init(store:)`
 - `PopupPanel.init()`
-- `ImagePreview.init()`
+- `MediaPreview.init()`
 - `PopupModel.onSelect`
 - `PopupModel.onOpenSettings`
 - `PopupModel.onPreview`
-- `ImagePreview.onClick` — clicking the preview closes it:
+- `MediaPreview.onClick` — clicking the preview closes it:
 - `PopupModel.closePreview()`
 Calls later:
 - `choose(_:modifiers:)` — when the model reports a chosen item.
@@ -97,7 +97,7 @@ Side effects:
 - [event-monitor] removes the key monitor.
 - [window] hides and releases the preview window and the panel.
 Uses:
-- `ImagePreview.tearDown()`
+- `MediaPreview.tearDown()`
 - `PopupModel.onSelect`
 - `PopupModel.onOpenSettings`
 - `PopupModel.onPreview`
@@ -126,14 +126,16 @@ Invariants:
 
 ### showPreview(_:)
 
-Purpose: opens the preview of an item next to the popup, or closes it (nil).
+Purpose: opens the preview of an item next to the popup, or closes it (nil). Images are shown full size; videos are played from their file.
 Side effects:
-- [sound] beeps when neither the source file nor the stored data can be read; the preview is then closed.
+- [disk-read] for a video: checks that its file still exists (recordings are kept only as a link to the file).
+- [sound] beeps when there is nothing to show — the video file is gone, or neither the image's source file nor its stored data can be read; the preview is then closed.
 Uses:
 - `PopupModel.store`
 - `HistoryStore.fullImage(for:)`
-- `ImagePreview.show(_:beside:)`
-- `ImagePreview.hide()`
+- `MediaPreview.show(_:beside:)`
+- `MediaPreview.showVideo(_:beside:)`
+- `MediaPreview.hide()`
 - `PopupModel.closePreview()`
 
 ### handleKey(_:)
@@ -159,7 +161,7 @@ Uses:
 
 ## PopupModel
 
-Purpose: the popup's state: search query, the filtered list (`visible`), the selected item, and which image is previewed. Published so the list redraws on every change. It never pastes or opens windows itself — it reports through `onSelect`, `onOpenSettings` and `onPreview`.
+Purpose: the popup's state: search query, the filtered list (`visible`), the selected item, and which image or video is previewed. Published so the list redraws on every change. It never pastes or opens windows itself — it reports through `onSelect`, `onOpenSettings` and `onPreview`.
 
 ### init(store:)
 
@@ -177,8 +179,10 @@ Side effects: none
 
 ### reset()
 
-Purpose: prepares the popup for opening: clears the search, selects the first item, scrolls to it and focuses the search field.
+Purpose: prepares the popup for opening: clears the search, selects the first item, scrolls to it, focuses the search field and refreshes the disk usage shown in the footer.
 Side effects: none
+Uses:
+- `HistoryStore.diskUsage()`
 
 ### refilter(_:)
 
@@ -192,11 +196,11 @@ Invariants:
 
 ### move(_:), moveToEdge(top:)
 
-Purpose: moves the selection by a number of rows, or to the first/last row, and scrolls to it. If the preview is open, it follows: it switches to the new item if it is an image, and closes otherwise.
+Purpose: moves the selection by a number of rows, or to the first/last row, and scrolls to it. If the preview is open, it follows: it switches to the new item if it can be previewed (see `canPreview`), and closes otherwise.
 Side effects: none
 Invariants:
 - INV-Popup-4: the selection never moves past the first or last row.
-- INV-Popup-5: with the preview open, moving onto an image previews that image; moving onto anything else closes the preview.
+- INV-Popup-5: with the preview open, moving onto an image or video previews it; moving onto anything else closes the preview.
 
 ### hover(_:)
 
@@ -217,27 +221,42 @@ Side effects: none
 
 ### remove(_:)
 
-Purpose: deletes the given or selected item.
+Purpose: deletes the given or selected item, then refreshes the disk usage.
 Uses:
 - `HistoryStore.remove(_:)`
+- `HistoryStore.diskUsage()`
 Side effects: none
 Invariants:
+- INV-Popup-12: the disk usage shown in the footer is fresh when the popup opens and after deleting from it.
 - INV-Popup-3: deleting the selected item selects the next one, or the previous one if it was last.
 - INV-Popup-6: deleting the previewed item closes the preview.
 
 ### clear()
 
-Purpose: closes the preview and deletes every unpinned item.
+Purpose: closes the preview, deletes every unpinned item, then refreshes the disk usage.
 Uses:
 - `HistoryStore.clear(keepPinned:)`
+- `HistoryStore.diskUsage()`
+Side effects: none
+
+### refreshDiskUsage()
+
+Purpose: re-measures the history's disk usage into `diskBytes`. Not refreshed for copies made while the popup is open (rare: the popup holds the keyboard), nor for the `history.json` save that lands 0.5 s after a change.
+Uses:
+- `HistoryStore.diskUsage()`
 Side effects: none
 
 ### togglePreview(_:)
 
-Purpose: without an item (⌘Y): closes the open preview, or opens the selected item's. With an item (the eye button): toggles that item's preview, or switches to it. Only images can be previewed; for other items it does nothing.
+Purpose: without an item (⌘Y): closes the open preview, or opens the selected item's. With an item (the eye button): toggles that item's preview, or switches to it. Only images and videos can be previewed; for other items it does nothing.
 Side effects: none
 Invariants:
-- INV-Popup-7: only image items can be previewed; ⌘Y closes an open preview, otherwise opens the selected image's.
+- INV-Popup-7: only images and videos can be previewed; ⌘Y closes an open preview, otherwise opens the selected item's.
+
+### canPreview(_:) -> Bool
+
+Purpose: whether an item has a preview: images (shown full size) and videos (played).
+Side effects: none
 
 ### closePreview()
 
@@ -251,22 +270,64 @@ Side effects:
 - [apps-read] looks up the app by bundle ID and reads its icon (first time per app).
 Output: nil when the item has no source app or the app is not installed.
 
-## ImagePreview
+## UsageLevel
 
-Purpose: a window that shows an image at full size next to the popup. It can never become key, so the popup keeps focus and stays open while the preview is shown. Clicking the image calls `onClick`.
+Purpose: how close the history is to its size limit — `low`, `medium` or `high` — which the footer shows as green, orange and red.
+
+### of(used:limit:) -> UsageLevel
+
+Purpose: the level for `used` of `limit` items: below 70 % `low`, below 90 % `medium`, from 90 % (or with a limit of 0) `high`.
+Side effects: none
+Invariants:
+- INV-Popup-11: below 70 % of the limit is `low`, 70 % up to 90 % is `medium`, 90 % and above is `high`.
+
+## ByteSize
+
+Purpose: formats sizes for the popup.
+
+### format(_:) -> String
+
+Purpose: `368 B` below one kilobyte, otherwise the system's file-size style (`17 KB`, `2.1 MB`; 1 KB = 1000 bytes, like Finder).
+Side effects: none
+Invariants:
+- INV-Popup-13: sizes below 1000 bytes are shown as `<n> B`; from 1000 bytes in KB, MB… like Finder.
+
+## MediaPreview
+
+Purpose: a window next to the popup that shows an image at full size or plays a video. It can never become key, so the popup keeps the keyboard and stays open while the preview is shown. Clicking an image calls `onClick` (the controller closes the preview); a video has the standard player controls (play/pause, scrubbing, volume), which react to the first click. Natural size is pixels / screen scale, so Retina screenshots and recordings show 1:1.
 
 ### show(_:beside:)
 
-Purpose: shows `image` next to the popup frame `beside`.
+Purpose: shows `image` next to the popup frame `beside`, stopping a video that was playing.
 Side effects:
+- [media-playback] stops the video, if one was playing.
 - [window] creates the window on first use, sizes and positions it (see `frame(size:beside:in:)`) and brings it to front without focusing it.
-Natural size is pixels / screen scale, so a Retina screenshot shows 1:1.
+
+### showVideo(_:beside:)
+
+Purpose: plays the video file at `url` next to the popup frame `beside`, with sound, from the start. Does not loop.
+Side effects:
+- [schedule] reads the video's frame size in the background (1280×720 if it can't be read), then plays it.
+Uses:
+- `MediaFile.videoSize(url:)`
+Calls later:
+- `play(_:pixelSize:beside:generation:)` — once the size is known.
+
+### play(_:pixelSize:beside:generation:)
+
+Purpose: shows the player sized for the video and starts playback — unless the preview was closed or switched to another item while the size was being read.
+Side effects:
+- [media-playback] stops the previous video, starts this one.
+- [disk-read] opens the video file for playback.
+- [window] sizes, positions and brings the window to front, like `show`.
+Order: [media-playback] → [disk-read] → [window]
 
 ### hide()
 
-Purpose: hides the preview and frees the image.
+Purpose: hides the preview, stops the video and frees the image.
 Side effects:
 - [window] hides the window.
+- [media-playback] stops the video.
 Uses:
 - `Memory.relieve()` — returns the decoded image's memory to the system.
 
@@ -275,19 +336,20 @@ Uses:
 Purpose: hides and releases the window.
 Side effects:
 - [window] hides the window.
+- [media-playback] stops the video.
 Uses:
 - `Memory.relieve()`
 
 ### frame(size:beside:in:) -> NSRect
 
-Purpose: where the preview goes: the image size shrunk (never enlarged) to fit on the side of the popup with more room, 8 pt from the popup and the screen edges, top-aligned with the popup; centered on the screen when neither side is at least 240 pt wide.
+Purpose: where the preview goes: the image or video size shrunk (never enlarged) to fit on the side of the popup with more room, 8 pt from the popup and the screen edges, top-aligned with the popup; centered on the screen when neither side is at least 240 pt wide.
 Side effects: none
 Invariants:
-- INV-Popup-10: the preview always fits inside the visible screen area, keeps the image's aspect ratio, is never larger than the image, and does not overlap the popup when a side has at least 240 pt.
+- INV-Popup-10: the preview always fits inside the visible screen area, keeps the aspect ratio, is never larger than the media, and does not overlap the popup when a side has at least 240 pt.
 
 ## HistoryView
 
-Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, pin mark, ⌘1…⌘9 hint, eye button for images, trash button), an empty state, and a footer with the item count, Clear, Settings and Quit. Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images), Show in Finder (files), Pin/Unpin, Delete.
+Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, pin mark, ⌘1…⌘9 hint, eye button for images and videos, trash button), an empty state, and a footer with the fill indicator, Clear, Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel`; its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the size of the history's data on disk (`12.3 MB`, formatted by `ByteSize`; see `HistoryStore.diskUsage()`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos), Show in Finder (files), Pin/Unpin, Delete.
 Side effects:
 - [open-external] "Show in Finder" reveals the item's files.
 - [terminate] the power button quits Pasty.
@@ -300,16 +362,23 @@ Uses:
 - `PopupModel.focusToken` — re-focuses the search field each time the popup opens.
 - `PopupModel.store`
 - `HistoryStore.thumbnail(for:)`
+- `HistoryStore.usage` — the fill indicator.
+- `HistoryStore.items` — the disk size is hidden while it is empty.
+- `PopupModel.diskBytes` — the disk usage next to it.
+- `ByteSize.format(_:)`
 - `PopupModel.appIcon(for:)`
 - `PopupModel.hover(_:)`
 - `PopupModel.select(_:modifiers:)` — click a row to choose it (modifier keys as in `PopupController.choose`).
 - `PopupModel.togglePin(_:)`
 - `PopupModel.togglePreview(_:)`
+- `PopupModel.canPreview(_:)`
 - `PopupModel.remove(_:)`
 - `PopupModel.clear()`
 - `PopupModel.onOpenSettings`
 
 ## ClipRow
 
-Purpose: one row of the list. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
+Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the ⌘1…⌘9 hint. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
 Side effects: none
+Uses:
+- `ByteSize.format(_:)`

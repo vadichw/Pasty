@@ -48,6 +48,15 @@ func addImage(_ store: HistoryStore, _ name: String, width: Int = 4, height: Int
                      contents: [[NSPasteboard.PasteboardType.png.rawValue: png]], appBundleID: nil, thumbnail: png)
 }
 
+@MainActor @discardableResult
+func addVideo(_ store: HistoryStore, _ name: String) -> UUID {
+    usleep(1000)
+    let path = "/tmp/\(name).mov"
+    return store.add(kind: .video, text: name, hash: HistoryStore.hash("file:" + path),
+                     contents: [[NSPasteboard.PasteboardType.fileURL.rawValue: Data("file://\(path)".utf8)]],
+                     appBundleID: nil, thumbnail: nil, filePath: path)
+}
+
 func pngData(width: Int, height: Int) -> Data {
     let rep = NSBitmapImageRep(
         bitmapDataPlanes: nil, pixelsWide: width, pixelsHigh: height, bitsPerSample: 8,

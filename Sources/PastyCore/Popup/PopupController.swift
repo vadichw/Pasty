@@ -52,7 +52,7 @@ enum PopupAnchor {
 final class PopupController: NSObject, NSWindowDelegate {
     let model: PopupModel
     private let panel = PopupPanel()
-    private let preview = ImagePreview()
+    private let preview = MediaPreview()
     private var keyMonitor: Any?
     private var lastHidden = Date.distantPast
 
@@ -133,6 +133,14 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     private func showPreview(_ item: ClipItem?) {
         guard let item else { return preview.hide() }
+        if item.kind == .video {
+            // Recordings are kept as a link to the file, so there is nothing to show once it's gone.
+            guard let path = item.filePath, FileManager.default.fileExists(atPath: path) else {
+                NSSound.beep()
+                return model.closePreview()
+            }
+            return preview.showVideo(URL(fileURLWithPath: path), beside: panel.frame)
+        }
         guard let image = model.store.fullImage(for: item) else {
             NSSound.beep() // the source file and stored data are both unreadable
             return model.closePreview()

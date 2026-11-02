@@ -24,6 +24,7 @@ enum Effect: String, CaseIterable, Codable, Comparable {
     case window
     case terminate
     case sound
+    case mediaPlayback = "media-playback"
     case memory
     case log
 
@@ -90,10 +91,12 @@ enum EffectRules {
         .init(.initializer, "NSImage", firstLabel: "contentsOf", .diskRead),
         .init(.initializer, "NSImage", firstLabel: "contentsOfFile", .diskRead),
         .init(.initializer, "AVURLAsset", .diskRead),
+        .init(.initializer, "AVPlayer", firstLabel: "url", .diskRead),
         .init(.function, "CGImageSourceCreateWithURL", .diskRead),
         .init(.member, "fileExists", .diskRead),
         .init(.member, "contentsOfDirectory", .diskRead),
         .init(.member, "attributesOfItem", .diskRead),
+        .init(.member, "resourceValues", firstLabel: "forKeys", .diskRead),
         .init(.member, "write", firstLabel: "to", .diskWrite),
         .init(.member, "createDirectory", .diskWrite),
         .init(.member, "moveItem", .diskWrite),
@@ -159,6 +162,8 @@ enum EffectRules {
         .init(.member, "activate", receiver: "NSApp", .window),
         .init(.member, "terminate", receiver: "NSApp", .terminate),
         .init(.member, "beep", .sound),
+        .init(.member, "play", receiver: "(?i)player", .mediaPlayback),
+        .init(.member, "pause", receiver: "(?i)player", .mediaPlayback),
         .init(.function, "malloc_zone_pressure_relief", .memory),
         .init(.function, "NSLog", .log),
     ]

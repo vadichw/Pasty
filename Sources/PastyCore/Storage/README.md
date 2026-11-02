@@ -15,7 +15,7 @@ On disk, in the directory given to `HistoryStore.init` (the app passes `~/Librar
 
 Purpose: metadata of one history entry — what it is, its searchable text, where it came from, when it was copied, whether it is pinned. The raw data is not here; it stays on disk.
 
-Fields: `id`, `kind` (`text` / `image` / `video` / `files`), `text` (at most `searchTextLimit` = 2000 characters), `hash` (identifies the content for de-duplication), `filePath` (source file of screenshots, recordings and copied media), `appBundleID` (app that was frontmost when it was copied), `firstCopied`, `lastCopied`, `copyCount`, `pinned`.
+Fields: `id`, `kind` (`text` / `image` / `video` / `files`), `text` (at most `searchTextLimit` = 2000 characters), `hash` (identifies the content for de-duplication), `filePath` (source file of screenshots, recordings and copied media), `appBundleID` (app that was frontmost when it was copied), `firstCopied`, `lastCopied`, `copyCount`, `pinned`, `byteCount` (size of the copied data — every format the source app provided — in bytes).
 
 ### title: String
 
@@ -50,9 +50,14 @@ Side effects:
 - [disk-write] creates `directory/items/` if missing.
 - [disk-read] reads `history.json` and checks that each item's `items/<id>.plist` exists.
 - [disk-write] deletes files in `items/` that belong to no item (left over from crashes or older versions).
+- [disk-read] items saved by older versions have no `byteCount`: data files under 1 MB are decoded for the exact size; bigger ones count as their file size (the storage overhead is negligible there, and decoding them all would load hundreds of MB at launch).
+- [schedule] if any size was filled in, saves `history.json` 0.5 s later, so this happens only once.
+Calls later:
+- `saveNow()`
 Invariants:
 - INV-Storage-6: items saved with `saveNow()` are loaded back unchanged by a new store on the same directory.
 - INV-Storage-7: on load, items whose data file is missing are dropped, and files in `items/` that belong to no item are deleted.
+- INV-Storage-14: after loading, every item has a `byteCount`; for items saved without one it is exact when their data file is under 1 MB, and the file size otherwise.
 Errors:
 - [disk-read] a missing or unreadable `history.json` starts an empty history (the old file is overwritten on the next save).
 - [disk-write] failing to create the folder or delete an orphan is ignored; later writes then fail silently too.
@@ -60,6 +65,11 @@ Errors:
 ### hash(_:) -> String
 
 Purpose: SHA-256 hex digest of a string (as UTF-8) or of raw data; used as the de-duplication key.
+Side effects: none
+
+### byteCount(of:) -> Int
+
+Purpose: the size of copied data: the total bytes of every type of every pasteboard item.
 Side effects: none
 
 ### add(kind:text:hash:contents:appBundleID:thumbnail:filePath:) -> UUID
@@ -78,6 +88,7 @@ Invariants:
 - INV-Storage-1: adding content whose `hash` is already in the history creates no new item: the existing one keeps its id, gets `lastCopied = now`, `copyCount + 1`, the new data, and moves to the top (of the unpinned part if it is not pinned).
 - INV-Storage-2: after any change, pinned items come first, then the rest by `lastCopied`, newest first.
 - INV-Storage-8: `contents(for:)` returns exactly the `contents` given to the latest `add` for that item.
+- INV-Storage-13: an item's `byteCount` is `byteCount(of:)` of the contents given to the latest `add` for it.
 Errors:
 - [disk-write] a failed write is ignored: the item is in the list, but `contents(for:)` returns nil and choosing it removes it.
 
@@ -154,6 +165,23 @@ Invariants:
 - INV-Storage-3: after `trim()` there are at most `historyLimit()` unpinned items, the newest ones; pinned items are never dropped.
 Errors:
 - [disk-write] failed deletes are ignored; the orphans are removed on the next launch.
+
+### usage: (used: Int, limit: Int)
+
+Purpose: how full the history is, for the popup's indicator: the number of unpinned items and the current limit.
+Side effects: none
+Invariants:
+- INV-Storage-11: `usage.used` counts only unpinned items (pinned ones don't count toward the limit), and `usage.limit` is the current `historyLimit()`.
+
+### diskUsage() -> Int64
+
+Purpose: how many bytes of history data are on disk: the sizes of `history.json` and every file in `items/` (data and thumbnails). File sizes, not allocated disk blocks — consistent with the items' own `byteCount`, so a nearly empty history doesn't show 4 KB per file. Finder's "on disk" can be somewhat larger.
+Side effects:
+- [disk-read] lists `items/` and reads each file's size.
+Invariants:
+- INV-Storage-12: adding an item with data makes `diskUsage()` grow, and removing it brings it back to where it was.
+Errors:
+- [disk-read] unreadable files and a missing `history.json` count as 0 bytes.
 
 ### contents(for:) -> ClipContents?
 

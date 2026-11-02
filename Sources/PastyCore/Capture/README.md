@@ -181,6 +181,13 @@ Side effects:
 - [disk-read] reads the video file.
 Output: fields are nil when they cannot be read.
 
+### videoSize(url:) async -> NSSize?
+
+Purpose: a video's frame size in pixels as it is displayed (rotation applied), for sizing the preview window.
+Side effects:
+- [disk-read] reads the video file's track information.
+Output: nil when the file has no readable video track.
+
 ### formatDuration(_:) -> String
 
 Purpose: seconds as `m:ss`, or `h:mm:ss` from one hour.

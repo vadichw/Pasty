@@ -82,7 +82,7 @@ Effects of other private helpers are folded into the member that calls them.
 |---|---|---|
 | `pasteboard-read` | reads the clipboard | `changeCount`, `pasteboardItems`, `readObjects`, `data(forType:)`, `string(forType:)` |
 | `pasteboard-write` | replaces the clipboard | `clearContents`, `writeObjects`, `setString` |
-| `disk-read` | reads files or folders | `Data(contentsOf:)`, `NSImage(contentsOf…)`, `AVURLAsset`, `CGImageSourceCreateWithURL`, `fileExists`, `contentsOfDirectory`, `attributesOfItem` |
+| `disk-read` | reads files or folders | `Data(contentsOf:)`, `NSImage(contentsOf…)`, `AVURLAsset`, `AVPlayer(url:)`, `CGImageSourceCreateWithURL`, `fileExists`, `contentsOfDirectory`, `attributesOfItem`, `resourceValues(forKeys:)` |
 | `disk-write` | creates, changes or deletes files | `write(to:)`, `createDirectory`, `moveItem`, `removeItem` |
 | `defaults-read` | reads settings | `UserDefaults` getters, `@AppStorage` |
 | `defaults-write` | changes settings | `UserDefaults` setters, `register(defaults:)`, `@AppStorage`, `setFrameAutosaveName` |
@@ -100,6 +100,7 @@ Effects of other private helpers are folded into the member that calls them.
 | `window` | shows, hides or focuses windows and menus | `makeKeyAndOrderFront`, `orderFront`, `orderOut`, `runModal`, `NSApp.activate`, status item |
 | `terminate` | quits the app | `NSApp.terminate` |
 | `sound` | beeps | `NSSound.beep` |
+| `media-playback` | plays or pauses audio/video | `player.play()`, `player.pause()` |
 | `memory` | returns freed memory to the system | `malloc_zone_pressure_relief` |
 | `log` | writes to the system log | `NSLog` |
 

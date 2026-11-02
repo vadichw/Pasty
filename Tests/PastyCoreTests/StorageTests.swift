@@ -143,6 +143,59 @@ struct StorageTests {
         #expect(clip(" \n\t ").title == "(whitespace)")
     }
 
+    @Test("INV-Storage-11: usage counts unpinned items against the current limit")
+    func usage() {
+        let limit = Limit(50)
+        let store = makeStore(limit: limit)
+        let pinned = addText(store, "pinned")
+        store.togglePin(item(store, pinned))
+        addText(store, "a")
+        addText(store, "b")
+        #expect(store.usage == (used: 2, limit: 50))
+        limit.value = 20
+        #expect(store.usage.limit == 20)
+    }
+
+    @Test("INV-Storage-12: diskUsage grows with an added item and shrinks back after removing it")
+    func diskUsage() {
+        let store = makeStore()
+        store.saveNow()
+        let before = store.diskUsage()
+        let id = addText(store, "big", contents: [[plainTextType: Data(count: 200_000)]])
+        #expect(store.diskUsage() >= before + 200_000)
+        store.remove(item(store, id))
+        #expect(store.diskUsage() == before)
+    }
+
+    @Test("INV-Storage-13: byteCount is the size of every format of the latest copy")
+    func itemSize() {
+        let store = makeStore()
+        let id = addText(store, "hi", contents: [[plainTextType: Data(count: 10), "public.html": Data(count: 30)], ["x": Data(count: 5)]])
+        #expect(item(store, id).byteCount == 45)
+        addText(store, "hi", contents: [[plainTextType: Data(count: 7)]])
+        #expect(item(store, id).byteCount == 7)
+    }
+
+    @Test("INV-Storage-14: items saved without a size get it on load: exact for small files, file size for big ones")
+    func sizeBackfill() throws {
+        let directory = temporaryDirectory()
+        let store = makeStore(directory: directory)
+        let small = addText(store, "old", contents: [[plainTextType: Data(count: 1000)]])
+        let big = addText(store, "big", contents: [["public.png": Data(count: 2 * 1024 * 1024)]])
+        store.saveNow()
+        // Rewrite history.json the way older versions saved it: without byteCount.
+        let index = directory.appendingPathComponent("history.json")
+        var json = try JSONSerialization.jsonObject(with: Data(contentsOf: index)) as! [[String: Any]]
+        for i in json.indices { json[i]["byteCount"] = nil }
+        try JSONSerialization.data(withJSONObject: json).write(to: index)
+
+        let reloaded = makeStore(directory: directory)
+        #expect(item(reloaded, small).byteCount == 1000)
+        let plist = directory.appendingPathComponent("items/\(big.uuidString).plist")
+        let fileSize = try FileManager.default.attributesOfItem(atPath: plist.path)[.size] as? Int
+        #expect(item(reloaded, big).byteCount == fileSize)
+    }
+
     @Test("INV-Storage-10: fullImage prefers the source file and falls back to the stored data")
     func fullImageSources() throws {
         let store = makeStore()

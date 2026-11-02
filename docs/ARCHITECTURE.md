@@ -60,6 +60,7 @@ graph LR
     Capture --> Storage
     Input
     Output
+    Popup --> Capture
     Popup --> Settings
     Popup --> Storage
     Popup --> Support
@@ -81,8 +82,9 @@ graph LR
 | App | Support | `Memory.relieve()` |
 | Capture | Settings | `Prefs.ignoredApps`, `Prefs.paused`, `Prefs.saveImages`, `Prefs.screenshotFolder`, `Prefs.watchScreenshots` |
 | Capture | Storage | `HistoryStore.add(kind:text:hash:contents:appBundleID:thumbnail:filePath:)`, `HistoryStore.hash(_:)`, `HistoryStore.updateMedia(id:thumbnail:text:)` |
+| Popup | Capture | `MediaFile.videoSize(url:)` |
 | Popup | Settings | `Prefs.pasteAutomatically`, `Prefs.pastePlainByDefault` |
-| Popup | Storage | `HistoryStore.clear(keepPinned:)`, `HistoryStore.fullImage(for:)`, `HistoryStore.items`, `HistoryStore.remove(_:)`, `HistoryStore.thumbnail(for:)`, `HistoryStore.togglePin(_:)` |
+| Popup | Storage | `HistoryStore.clear(keepPinned:)`, `HistoryStore.diskUsage()`, `HistoryStore.fullImage(for:)`, `HistoryStore.items`, `HistoryStore.remove(_:)`, `HistoryStore.thumbnail(for:)`, `HistoryStore.togglePin(_:)`, `HistoryStore.usage` |
 | Popup | Support | `Memory.relieve()` |
 | Settings | Capture | `ScreenshotWatcher.folder` |
 | Settings | Output | `Paster.hasAccessibility`, `Paster.openAccessibilitySettings()`, `Paster.requestAccessibility()` |
