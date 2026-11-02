@@ -13,15 +13,22 @@ final class HistoryStore: ObservableObject {
     private let itemsURL: URL
     private var indexURL: URL { baseURL.appendingPathComponent("history.json") }
     private var saveScheduled = false
+    private let historyLimit: () -> Int
     private let thumbnails: NSCache<NSUUID, NSImage> = {
         let cache = NSCache<NSUUID, NSImage>()
         cache.countLimit = 60
         return cache
     }()
 
-    init() {
-        let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        baseURL = support.appendingPathComponent("Pasty", isDirectory: true)
+    /// `~/Library/Application Support/Pasty`.
+    static var defaultDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Pasty", isDirectory: true)
+    }
+
+    init(directory: URL, historyLimit: @escaping () -> Int) {
+        self.historyLimit = historyLimit
+        baseURL = directory
         itemsURL = baseURL.appendingPathComponent("items", isDirectory: true)
         try? fm.createDirectory(at: itemsURL, withIntermediateDirectories: true)
         load()
@@ -110,7 +117,7 @@ final class HistoryStore: ObservableObject {
     /// Drops the oldest unpinned items beyond the configured limit.
     func trim() {
         let unpinned = items.filter { !$0.pinned }
-        let limit = Prefs.historyLimit
+        let limit = historyLimit()
         guard unpinned.count > limit else { return }
         let dropped = unpinned[limit...]
         dropped.forEach { deleteFiles($0.id) }

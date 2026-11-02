@@ -49,15 +49,21 @@ final class ImagePreview {
         imageView = nil
     }
 
-    /// Natural size in points (pixels / screen scale), shrunk to fit beside the popup,
-    /// on whichever side has more room.
+    /// Natural size in points: pixels / screen scale, so a Retina screenshot shows 1:1.
     private static func frame(for image: NSImage, beside anchor: NSRect, on screen: NSScreen) -> NSRect {
         var size = image.size
         if let rep = image.representations.first, rep.pixelsWide > 0, rep.pixelsHigh > 0 {
             size = NSSize(width: CGFloat(rep.pixelsWide) / screen.backingScaleFactor,
                           height: CGFloat(rep.pixelsHigh) / screen.backingScaleFactor)
         }
-        let visible = screen.visibleFrame.insetBy(dx: gap, dy: gap)
+        return frame(size: size, beside: anchor, in: screen.visibleFrame)
+    }
+
+    /// Shrinks `size` to fit beside the popup, on whichever side has more room;
+    /// centered on the screen when neither side is wide enough.
+    static func frame(size: NSSize, beside anchor: NSRect, in visibleFrame: NSRect) -> NSRect {
+        var size = size
+        let visible = visibleFrame.insetBy(dx: gap, dy: gap)
         let rightWidth = visible.maxX - anchor.maxX - gap
         let leftWidth = anchor.minX - gap - visible.minX
         let sideWidth = max(rightWidth, leftWidth)

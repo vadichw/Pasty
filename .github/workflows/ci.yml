@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-test-docs:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the README-freshness check diffs against the base branch
+
+      - name: Cache the docs tool build (SwiftSyntax takes a while)
+        uses: actions/cache@v4
+        with:
+          path: Tools/pasty-docs/.build
+          key: pasty-docs-${{ runner.os }}-${{ hashFiles('Tools/pasty-docs/Package.resolved', 'Tools/pasty-docs/Sources/**') }}
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test (every README invariant has a test)
+        run: swift test
+
+      - name: Module READMEs match the code
+        run: scripts/check_docs.sh
+
+      - name: Modules whose code changed also updated their README
+        if: github.event_name == 'pull_request'
+        run: scripts/check_docs.sh --base "origin/${{ github.base_ref }}"

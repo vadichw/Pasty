@@ -49,7 +49,8 @@ enum Prefs {
         static let screenshotFolder = "screenshotFolder"
     }
 
-    private static let defaults = UserDefaults.standard
+    /// Replaced with a scratch suite in tests.
+    static var defaults = UserDefaults.standard
 
     static func registerDefaults() {
         defaults.register(defaults: [

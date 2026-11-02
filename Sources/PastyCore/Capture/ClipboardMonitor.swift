@@ -1,10 +1,10 @@
 import AppKit
 
-/// Polls `NSPasteboard.general.changeCount` (macOS has no change notification) and
+/// Polls the pasteboard's `changeCount` (macOS has no change notification) and
 /// records new contents into the history store.
 @MainActor
 final class ClipboardMonitor {
-    private let pasteboard = NSPasteboard.general
+    private let pasteboard: NSPasteboard
     private let store: HistoryStore
     private var lastChangeCount: Int
     private var timer: Timer?
@@ -26,8 +26,9 @@ final class ClipboardMonitor {
 
     private static let imageTypes: [NSPasteboard.PasteboardType] = [.png, .tiff]
 
-    init(store: HistoryStore) {
+    init(store: HistoryStore, pasteboard: NSPasteboard = .general) {
         self.store = store
+        self.pasteboard = pasteboard
         lastChangeCount = pasteboard.changeCount
     }
 
@@ -46,7 +47,8 @@ final class ClipboardMonitor {
         lastChangeCount = pasteboard.changeCount
     }
 
-    private func check() {
+    /// Records the pasteboard contents if they changed since the last check. Runs on every tick of the timer.
+    func check() {
         let changeCount = pasteboard.changeCount
         guard changeCount != lastChangeCount else { return }
         lastChangeCount = changeCount

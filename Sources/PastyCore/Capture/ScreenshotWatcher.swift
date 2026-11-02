@@ -70,7 +70,8 @@ final class ScreenshotWatcher {
         return urls.filter { MediaFile.kind(of: $0) != nil }.map(\.path)
     }
 
-    private func scan() {
+    /// Queues media files that appeared since the last scan. Runs on every folder change event.
+    func scan() {
         guard let folder else { return }
         for path in mediaFiles(in: folder) where !known.contains(path) {
             known.insert(path)
@@ -82,7 +83,8 @@ final class ScreenshotWatcher {
         }
     }
 
-    private func checkPending() {
+    /// Reports queued files whose size stopped changing. Runs every 0.7 s while files are queued.
+    func checkPending() {
         for (path, lastSize) in pending {
             guard let size = (try? FileManager.default.attributesOfItem(atPath: path))?[.size] as? Int else {
                 pending[path] = nil // removed or renamed before it settled

@@ -58,17 +58,32 @@ Screen recordings are stored as links to the file — if you delete the video, i
 
 Click the menu bar icon for the history, right-click for the menu (pause, clear, settings, quit).
 
-## Layout
+## How the code is documented
 
-| File | Purpose |
+Every module of `Sources/PastyCore` has a `README.md` that describes, member by member, what the
+code does — inputs, outputs, side effects (files, clipboard, settings, keystrokes…), their order,
+invariants and failure behaviour — so you can read the behaviour instead of the code.
+`scripts/check_docs.sh` proves the text matches the code: a SwiftSyntax-based extractor
+(`Tools/pasty-docs`) pulls the facts out of the code and the check fails on any difference; every
+invariant is backed by a test. Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the format
+is in [docs/DOC_FORMAT.md](docs/DOC_FORMAT.md).
+
+| Module | Purpose |
 |---|---|
-| `ClipboardMonitor.swift` | Polls `NSPasteboard.changeCount` every 0.5 s and stores all data types |
-| `HistoryStore.swift` | `history.json` + raw data of each item in `items/<id>.plist` (~/Library/Application Support/Pasty) |
-| `HotKey.swift`, `KeyCombo.swift` | Global hotkey via Carbon (no permissions required) |
-| `ScreenshotWatcher.swift` | Watches the screenshot folder for new images/videos |
-| `MediaFile.swift` | Image/video detection, thumbnails, video duration |
-| `PopupController.swift` | Non-activating panel: takes keyboard input without stealing focus from the current app |
-| `PopupModel.swift`, `HistoryView.swift` | Search, selection and the SwiftUI list |
-| `ImagePreview.swift` | Full-size image preview window next to the popup |
-| `Paster.swift` | Writes to the clipboard and simulates ⌘V |
-| `SettingsView.swift` | Settings window |
+| [App](Sources/PastyCore/App/README.md) | Startup, menu bar icon, global shortcut actions, pasting a chosen item, screenshots |
+| [Capture](Sources/PastyCore/Capture/README.md) | Clipboard polling, screenshot folder watching, classification |
+| [Storage](Sources/PastyCore/Storage/README.md) | The history in memory and on disk (`~/Library/Application Support/Pasty`) |
+| [Popup](Sources/PastyCore/Popup/README.md) | The searchable history panel and the image preview |
+| [Output](Sources/PastyCore/Output/README.md) | Writing to the clipboard, simulated ⌘V |
+| [Input](Sources/PastyCore/Input/README.md) | Global hotkeys via Carbon (no permissions required) |
+| [Settings](Sources/PastyCore/Settings/README.md) | Preferences and the Settings window |
+| [Support](Sources/PastyCore/Support/README.md) | Low-level helpers |
+
+## Development
+
+```bash
+swift test                    # tests
+scripts/check_docs.sh         # module READMEs vs code (--fix regenerates the module graph)
+```
+
+CI runs the build, the tests and the docs check on every pull request.
