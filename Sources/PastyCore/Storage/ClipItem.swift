@@ -25,6 +25,9 @@ struct ClipItem: Codable, Identifiable, Equatable {
     var lastCopied: Date
     var copyCount: Int
     var pinned: Bool
+    /// Size of the copied data — every type of every pasteboard item — in bytes.
+    /// Missing in history saved by older versions; filled in from the data file on load.
+    var byteCount: Int?
 
     /// Single-line representation for the list.
     var title: String {

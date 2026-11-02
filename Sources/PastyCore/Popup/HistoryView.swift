@@ -55,15 +55,14 @@ struct HistoryView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 1) {
-                    ForEach(Array(model.visible.enumerated()), id: \.element.id) { index, item in
+                    ForEach(model.visible) { item in
                         ClipRow(
                             item: item,
-                            index: index,
                             isSelected: item.id == model.selectedID,
                             appIcon: model.appIcon(for: item),
                             thumbnail: item.kind == .image || item.kind == .video ? model.store.thumbnail(for: item) : nil,
                             isPreviewed: item.id == model.previewID,
-                            onPreview: item.kind == .image ? { model.togglePreview(item) } : nil,
+                            onPreview: PopupModel.canPreview(item) ? { model.togglePreview(item) } : nil,
                             onDelete: { model.remove(item) }
                         )
                         .id(item.id)
@@ -89,7 +88,7 @@ struct HistoryView: View {
         }
         Button("Copy Only") { model.select(item, modifiers: .option) }
         Divider()
-        if item.kind == .image {
+        if PopupModel.canPreview(item) {
             Button(item.id == model.previewID ? "Close Preview" : "Preview") { model.togglePreview(item) }
         }
         if !item.fileURLs.isEmpty {
@@ -101,10 +100,20 @@ struct HistoryView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            Text(countLabel(model.visible.count))
-                .foregroundStyle(.secondary)
+            let usage = model.store.usage
+            UsageIndicator(used: usage.used, limit: usage.limit)
+            if !model.store.items.isEmpty {
+                Text(ByteSize.format(Int64(model.store.totalBytes)))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .help("Total size of all copied items")
+            }
+            if !model.query.isEmpty {
+                Text("\(model.visible.count) found")
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
-            Button("Clear") { model.clear() }
+            Button { model.clear() } label: { Image(systemName: "trash") }
                 .help("Delete all unpinned items")
             Button { model.onOpenSettings?() } label: { Image(systemName: "gearshape") }
                 .help("Settings (⌘,)")
@@ -117,14 +126,42 @@ struct HistoryView: View {
         .padding(.vertical, 8)
     }
 
-    private func countLabel(_ n: Int) -> String {
-        n == 1 ? "1 item" : "\(n) items"
+}
+
+/// "20/2000" with a bar that turns orange and then red as the history fills up.
+private struct UsageIndicator: View {
+    let used: Int
+    let limit: Int
+
+    private var color: Color {
+        switch UsageLevel.of(used: used, limit: limit) {
+        case .low: .green
+        case .medium: .orange
+        case .high: .red
+        }
+    }
+
+    var body: some View {
+        let fraction = limit > 0 ? min(1, Double(used) / Double(limit)) : 1
+        HStack(spacing: 6) {
+            Capsule()
+                .fill(.quaternary)
+                .frame(width: 44, height: 5)
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(color)
+                        .frame(width: max(5, 44 * fraction), height: 5)
+                }
+            Text("\(used)/\(limit)")
+                .monospacedDigit()
+                .foregroundStyle(color)
+        }
+        .help("\(used) of \(limit) items; when full, the oldest unpinned items are deleted. Pinned items don't count. Change the limit in Settings.")
     }
 }
 
 struct ClipRow: View {
     let item: ClipItem
-    let index: Int
     let isSelected: Bool
     let appIcon: NSImage?
     let thumbnail: NSImage?
@@ -169,10 +206,11 @@ struct ClipRow: View {
                     .font(.system(size: 10))
                     .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.orange))
             }
-            if index < 9 {
-                Text("⌘\(index + 1)")
+            if let byteCount = item.byteCount {
+                Text(ByteSize.format(Int64(byteCount)))
                     .font(.system(size: 11).monospacedDigit())
                     .opacity(0.55)
+                    .help("Size of the copied data, all formats included")
             }
             if let onPreview {
                 Button(action: onPreview) {

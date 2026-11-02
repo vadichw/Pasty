@@ -1,0 +1,3 @@
+import PastyCore
+
+PastyApp.run()

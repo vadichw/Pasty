@@ -6,8 +6,8 @@ import Carbon.HIToolbox
 enum Paster {
     /// Puts a history item back on the pasteboard, either with all original types
     /// (formatting, images, files) or as plain text only.
-    static func write(_ contents: ClipContents, item: ClipItem, plainText: Bool) {
-        let pasteboard = NSPasteboard.general
+    static func write(_ contents: ClipContents, item: ClipItem, plainText: Bool,
+                      to pasteboard: NSPasteboard = .general) {
         pasteboard.clearContents()
 
         if plainText, item.kind == .text {
@@ -19,12 +19,11 @@ enum Paster {
             return
         }
 
-        write(contents)
+        write(contents, to: pasteboard)
     }
 
     /// Writes raw contents with all their original types.
-    static func write(_ contents: ClipContents) {
-        let pasteboard = NSPasteboard.general
+    static func write(_ contents: ClipContents, to pasteboard: NSPasteboard = .general) {
         pasteboard.clearContents()
         let objects = contents.map { dict -> NSPasteboardItem in
             let pbItem = NSPasteboardItem()

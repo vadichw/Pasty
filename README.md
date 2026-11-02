@@ -49,7 +49,7 @@ Screen recordings are stored as links to the file — if you delete the video, i
 | ↩ | Paste |
 | ⇧↩ | Paste without formatting |
 | ⌥↩ | Copy only (no paste) |
-| ⌘1 … ⌘9 | Select item by number |
+| ⌘1 … ⌘9 | Paste one of the first nine items |
 | ⌘P | Pin / unpin |
 | ⌘Y | Preview image (also the eye button) |
 | ⌥⌫ | Delete item |
@@ -58,17 +58,99 @@ Screen recordings are stored as links to the file — if you delete the video, i
 
 Click the menu bar icon for the history, right-click for the menu (pause, clear, settings, quit).
 
-## Layout
+## How it works
 
-| File | Purpose |
+Where data comes from and where it goes:
+
+```mermaid
+flowchart LR
+    subgraph mac["macOS"]
+        CB[("Clipboard")]
+        SF[/"Screenshot folder"/]
+        FA["App you are typing in"]
+    end
+
+    subgraph capture["Capture"]
+        CM["ClipboardMonitor<br/>checks every 0.5 s"]
+        SW["ScreenshotWatcher<br/>waits until the file is written"]
+    end
+
+    HS[("Storage · HistoryStore<br/>history.json + items/")]
+
+    subgraph ui["Popup"]
+        PC["History panel<br/>search · select · preview"]
+    end
+
+    HK["⇧⌘C · Input"] --> AD
+    MB["Menu bar icon"] --> AD
+    AD["App · AppDelegate"]
+    PS["Output · Paster"]
+    ST["Settings"]
+
+    CB -- "changed?" --> CM
+    SF -- "new image / video" --> SW --> AD
+    AD -- "record screenshot" --> CM
+    CM -- "passwords, paused, ignored apps,<br/>&gt; 50 MB: skipped" --> X(("not saved"))
+    CM -- "add item" --> HS
+    HS -- "items" --> PC
+    AD -- "open" --> PC
+    PC -- "chosen item" --> AD
+    AD -- "write item" --> PS --> CB
+    PS -- "⌘V" --> FA
+    ST -. "read by every module" .-> CM
+```
+
+What happens when you pick an item:
+
+```mermaid
+sequenceDiagram
+    actor You
+    participant Popup
+    participant App as AppDelegate
+    participant Store as HistoryStore
+    participant Paster
+    participant Monitor as ClipboardMonitor
+    participant Target as App you were typing in
+
+    You->>Popup: ⇧⌘C, find, ↩
+    Popup->>App: chosen item (+ ⇧ plain text, ⌥ copy only)
+    App->>Store: read the item's data
+    App->>Paster: put it on the clipboard
+    App->>Monitor: skip this change (don't record it again)
+    App->>Store: move the item to the top
+    App->>Paster: 0.1 s later: press ⌘V
+    Paster->>Target: ⌘V
+```
+
+Every box is described in detail — inputs, outputs, side effects, guarantees — in its module's
+README (see below).
+
+## How the code is documented
+
+Every module of `Sources/PastyCore` has a `README.md` that describes, member by member, what the
+code does — inputs, outputs, side effects (files, clipboard, settings, keystrokes…), their order,
+invariants and failure behaviour — so you can read the behaviour instead of the code.
+`scripts/check_docs.sh` proves the text matches the code: a SwiftSyntax-based extractor
+(`Tools/pasty-docs`) pulls the facts out of the code and the check fails on any difference; every
+invariant is backed by a test. Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); the format
+is in [docs/DOC_FORMAT.md](docs/DOC_FORMAT.md).
+
+| Module | Purpose |
 |---|---|
-| `ClipboardMonitor.swift` | Polls `NSPasteboard.changeCount` every 0.5 s and stores all data types |
-| `HistoryStore.swift` | `history.json` + raw data of each item in `items/<id>.plist` (~/Library/Application Support/Pasty) |
-| `HotKey.swift`, `KeyCombo.swift` | Global hotkey via Carbon (no permissions required) |
-| `ScreenshotWatcher.swift` | Watches the screenshot folder for new images/videos |
-| `MediaFile.swift` | Image/video detection, thumbnails, video duration |
-| `PopupController.swift` | Non-activating panel: takes keyboard input without stealing focus from the current app |
-| `PopupModel.swift`, `HistoryView.swift` | Search, selection and the SwiftUI list |
-| `ImagePreview.swift` | Full-size image preview window next to the popup |
-| `Paster.swift` | Writes to the clipboard and simulates ⌘V |
-| `SettingsView.swift` | Settings window |
+| [App](Sources/PastyCore/App/README.md) | Startup, menu bar icon, global shortcut actions, pasting a chosen item, screenshots |
+| [Capture](Sources/PastyCore/Capture/README.md) | Clipboard polling, screenshot folder watching, classification |
+| [Storage](Sources/PastyCore/Storage/README.md) | The history in memory and on disk (`~/Library/Application Support/Pasty`) |
+| [Popup](Sources/PastyCore/Popup/README.md) | The searchable history panel and the image preview |
+| [Output](Sources/PastyCore/Output/README.md) | Writing to the clipboard, simulated ⌘V |
+| [Input](Sources/PastyCore/Input/README.md) | Global hotkeys via Carbon (no permissions required) |
+| [Settings](Sources/PastyCore/Settings/README.md) | Preferences and the Settings window |
+| [Support](Sources/PastyCore/Support/README.md) | Low-level helpers |
+
+## Development
+
+```bash
+swift test                    # tests
+scripts/check_docs.sh         # module READMEs vs code (--fix regenerates the module graph)
+```
+
+CI runs the build, the tests and the docs check on every pull request.

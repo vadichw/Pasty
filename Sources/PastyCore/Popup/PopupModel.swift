@@ -1,6 +1,27 @@
 import AppKit
 import Combine
 
+/// How close the history is to its size limit, for the indicator in the popup's footer.
+enum UsageLevel {
+    case low, medium, high
+
+    /// Below 70 % low, below 90 % medium, from 90 % high.
+    static func of(used: Int, limit: Int) -> UsageLevel {
+        guard limit > 0 else { return .high }
+        let fraction = Double(used) / Double(limit)
+        return fraction < 0.7 ? .low : fraction < 0.9 ? .medium : .high
+    }
+}
+
+/// Sizes as the popup shows them.
+enum ByteSize {
+    /// `368 B`, `17 KB`, `2.1 MB` — the system's file-size style, except that it says
+    /// "bytes" below one kilobyte, which is too long next to "KB" and "MB".
+    static func format(_ bytes: Int64) -> String {
+        bytes < 1000 ? "\(bytes) B" : ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
 @MainActor
 final class PopupModel: ObservableObject {
     let store: HistoryStore
@@ -65,7 +86,7 @@ final class PopupModel: ObservableObject {
         lastKeyboardNavigation = Date()
         // Like Quick Look: the open preview follows the keyboard selection.
         if previewID != nil, let item = selected {
-            item.kind == .image ? showPreview(item) : closePreview()
+            Self.canPreview(item) ? showPreview(item) : closePreview()
         }
     }
 
@@ -115,8 +136,13 @@ final class PopupModel: ObservableObject {
     /// with one (the eye button) toggles that item's preview.
     func togglePreview(_ item: ClipItem? = nil) {
         if previewID != nil, item == nil || item?.id == previewID { return closePreview() }
-        guard let item = item ?? selected, item.kind == .image else { return }
+        guard let item = item ?? selected, Self.canPreview(item) else { return }
         showPreview(item)
+    }
+
+    /// Images show full size; videos play.
+    static func canPreview(_ item: ClipItem) -> Bool {
+        item.kind == .image || item.kind == .video
     }
 
     func closePreview() {

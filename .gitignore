@@ -4,3 +4,7 @@
 /.swiftpm/
 *.xcodeproj/
 xcuserdata/
+
+# Dev tool build products
+/Tools/pasty-docs/.build/
+/Tools/pasty-docs/.swiftpm/

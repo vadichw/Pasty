@@ -2,9 +2,9 @@ import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-@main
-enum PastyMain {
-    static func main() {
+/// Entry point, called from the `Pasty` executable.
+public enum PastyApp {
+    public static func run() {
         let app = NSApplication.shared
         let delegate = MainActor.assumeIsolated { AppDelegate() }
         app.delegate = delegate
@@ -15,7 +15,7 @@ enum PastyMain {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSWindowDelegate {
-    private let store = HistoryStore()
+    private let store = HistoryStore(directory: HistoryStore.defaultDirectory, historyLimit: { Prefs.historyLimit })
     private lazy var monitor = ClipboardMonitor(store: store)
     /// Created on demand and released shortly after it closes, so the SwiftUI view tree
     /// doesn't occupy memory while the app sits idle in the menu bar.

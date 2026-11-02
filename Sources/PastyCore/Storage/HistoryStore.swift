@@ -13,18 +13,30 @@ final class HistoryStore: ObservableObject {
     private let itemsURL: URL
     private var indexURL: URL { baseURL.appendingPathComponent("history.json") }
     private var saveScheduled = false
+    private let historyLimit: () -> Int
     private let thumbnails: NSCache<NSUUID, NSImage> = {
         let cache = NSCache<NSUUID, NSImage>()
         cache.countLimit = 60
         return cache
     }()
 
-    init() {
-        let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        baseURL = support.appendingPathComponent("Pasty", isDirectory: true)
+    /// `~/Library/Application Support/Pasty`.
+    static var defaultDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Pasty", isDirectory: true)
+    }
+
+    init(directory: URL, historyLimit: @escaping () -> Int) {
+        self.historyLimit = historyLimit
+        baseURL = directory
         itemsURL = baseURL.appendingPathComponent("items", isDirectory: true)
         try? fm.createDirectory(at: itemsURL, withIntermediateDirectories: true)
         load()
+    }
+
+    /// Total bytes of every type of every pasteboard item.
+    static func byteCount(of contents: ClipContents) -> Int {
+        contents.reduce(0) { total, item in total + item.values.reduce(0) { $0 + $1.count } }
     }
 
     static func hash(_ string: String) -> String { hash(Data(string.utf8)) }
@@ -46,11 +58,13 @@ final class HistoryStore: ObservableObject {
             items[index].lastCopied = now
             items[index].copyCount += 1
             items[index].appBundleID = appBundleID ?? items[index].appBundleID
+            items[index].byteCount = Self.byteCount(of: contents)
             writeContents(contents, for: id)
         } else {
             let item = ClipItem(
                 id: UUID(), kind: kind, text: text, hash: hash, filePath: filePath, appBundleID: appBundleID,
-                firstCopied: now, lastCopied: now, copyCount: 1, pinned: false
+                firstCopied: now, lastCopied: now, copyCount: 1, pinned: false,
+                byteCount: Self.byteCount(of: contents)
             )
             id = item.id
             writeContents(contents, for: id)
@@ -110,7 +124,7 @@ final class HistoryStore: ObservableObject {
     /// Drops the oldest unpinned items beyond the configured limit.
     func trim() {
         let unpinned = items.filter { !$0.pinned }
-        let limit = Prefs.historyLimit
+        let limit = historyLimit()
         guard unpinned.count > limit else { return }
         let dropped = unpinned[limit...]
         dropped.forEach { deleteFiles($0.id) }
@@ -120,6 +134,16 @@ final class HistoryStore: ObservableObject {
     }
 
     // MARK: - Reading
+
+    /// How full the history is. Pinned items don't count: the limit only applies to unpinned ones.
+    var usage: (used: Int, limit: Int) {
+        (items.lazy.filter { !$0.pinned }.count, historyLimit())
+    }
+
+    /// Total size of every item in the history: the sum of their `byteCount`s.
+    var totalBytes: Int {
+        items.reduce(0) { $0 + ($1.byteCount ?? 0) }
+    }
 
     func contents(for item: ClipItem) -> ClipContents? {
         guard let data = try? Data(contentsOf: contentsURL(item.id)) else { return nil }
@@ -160,6 +184,7 @@ final class HistoryStore: ObservableObject {
         if let data = try? Data(contentsOf: indexURL),
            let decoded = try? JSONDecoder().decode([ClipItem].self, from: data) {
             items = decoded.filter { fm.fileExists(atPath: contentsURL($0.id).path) }
+            fillInMissingSizes()
             // Older versions kept up to 20k characters per item in memory.
             for index in items.indices where items[index].text.count > ClipItem.searchTextLimit {
                 items[index].text = String(items[index].text.prefix(ClipItem.searchTextLimit))
@@ -167,6 +192,23 @@ final class HistoryStore: ObservableObject {
             sort()
         }
         removeOrphanFiles()
+    }
+
+    /// Items saved by older versions have no `byteCount`. Small data files are decoded for the
+    /// exact size; for big ones (images) the file size is used — the plist overhead is negligible
+    /// there, and decoding them all at launch would load hundreds of megabytes.
+    private func fillInMissingSizes() {
+        var filled = false
+        for index in items.indices where items[index].byteCount == nil {
+            let url = contentsURL(items[index].id)
+            let fileSize = ((try? fm.attributesOfItem(atPath: url.path))?[.size] as? NSNumber)?.intValue ?? 0
+            items[index].byteCount = autoreleasepool {
+                guard fileSize < 1024 * 1024, let contents = contents(for: items[index]) else { return fileSize }
+                return Self.byteCount(of: contents)
+            }
+            filled = true
+        }
+        if filled { scheduleSave() } // so this happens only once
     }
 
     private func removeOrphanFiles() {
