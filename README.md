@@ -1,4 +1,8 @@
-# Pasty
+<p align="center">
+  <img src="docs/icon.png" width="128" height="128" alt="Pasty icon">
+</p>
+
+<h1 align="center">Pasty</h1>
 
 A menu bar clipboard manager for macOS.
 Swift + AppKit + SwiftUI, no external dependencies, macOS 14+.
@@ -79,41 +83,65 @@ Click the menu bar icon for the history, right-click for the menu (pause, clear,
 Where data comes from and where it goes:
 
 ```mermaid
-flowchart LR
-    subgraph mac["macOS"]
-        CB[("Clipboard")]
-        SF[/"Screenshot folder"/]
-        FA["App you are typing in"]
+%%{init: {"theme": "base", "themeVariables": {"fontSize": "15px", "lineColor": "#94a3b8", "textColor": "#0f172a", "edgeLabelBackground": "#f8fafc", "clusterBkg": "#1e293b", "clusterBorder": "#64748b", "titleColor": "#f8fafc"}}}%%
+flowchart TB
+    subgraph mac["🍎 macOS"]
+        direction LR
+        CB[("📋 Clipboard")]
+        SF[/"🖼 Screenshot folder"/]
+        FA["⌨️ App you are typing in"]
     end
 
+    HK["⌨️ ⇧⌘C shortcut<br/>Input · HotKey"]
+    MB["📎 Menu bar icon"]
+
     subgraph capture["Capture"]
+        direction LR
         CM["ClipboardMonitor<br/>checks every 0.5 s"]
         SW["ScreenshotWatcher<br/>waits until the file is written"]
     end
 
-    HS[("Storage · HistoryStore<br/>history.json + items/")]
-
-    subgraph ui["Popup"]
-        PC["History panel<br/>search · select · preview"]
-    end
-
-    HK["⇧⌘C · Input"] --> AD
-    MB["Menu bar icon"] --> AD
-    AD["App · AppDelegate"]
-    PS["Output · Paster"]
-    ST["Settings"]
+    AD["🧠 App · AppDelegate<br/>connects everything"]
+    HS[("💾 Storage · HistoryStore<br/>history.json + items/")]
+    PC["🔍 Popup<br/>search · select · preview"]
+    PS["📤 Output · Paster<br/>clipboard + ⌘V"]
+    ST["⚙️ Settings"]
+    X(("🚫 not saved"))
 
     CB -- "changed?" --> CM
-    SF -- "new image / video" --> SW --> AD
+    SF -- "new image / video" --> SW
+    SW --> AD
     AD -- "record screenshot" --> CM
-    CM -- "passwords, paused, ignored apps,<br/>&gt; 50 MB: skipped" --> X(("not saved"))
+    CM -- "passwords, paused, ignored apps, over 50 MB" --> X
     CM -- "add item" --> HS
-    HS -- "items" --> PC
+    HK --> AD
+    MB --> AD
     AD -- "open" --> PC
+    HS -- "items" --> PC
     PC -- "chosen item" --> AD
-    AD -- "write item" --> PS --> CB
+    AD -- "write item" --> PS
+    PS --> CB
     PS -- "⌘V" --> FA
     ST -. "read by every module" .-> CM
+
+    classDef macos fill:#e2e8f0,stroke:#94a3b8,color:#0f172a
+    classDef input fill:#22d3ee,stroke:#0891b2,color:#083344
+    classDef capture fill:#4ade80,stroke:#16a34a,color:#052e16
+    classDef app fill:#60a5fa,stroke:#2563eb,color:#0b1e3f
+    classDef storage fill:#fbbf24,stroke:#d97706,color:#422006
+    classDef popup fill:#c084fc,stroke:#9333ea,color:#2e1065
+    classDef output fill:#f472b6,stroke:#db2777,color:#500724
+    classDef settings fill:#cbd5e1,stroke:#64748b,color:#0f172a
+    classDef skipped fill:#f87171,stroke:#dc2626,color:#450a0a
+    class CB,SF,FA macos
+    class HK,MB input
+    class CM,SW capture
+    class AD app
+    class HS storage
+    class PC popup
+    class PS output
+    class ST settings
+    class X skipped
 ```
 
 What happens when you pick an item:
