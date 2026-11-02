@@ -84,7 +84,7 @@ graph LR
 | Capture | Storage | `HistoryStore.add(kind:text:hash:contents:appBundleID:thumbnail:filePath:)`, `HistoryStore.hash(_:)`, `HistoryStore.updateMedia(id:thumbnail:text:)` |
 | Popup | Capture | `MediaFile.videoSize(url:)` |
 | Popup | Settings | `Prefs.pasteAutomatically`, `Prefs.pastePlainByDefault` |
-| Popup | Storage | `HistoryStore.clear(keepPinned:)`, `HistoryStore.diskUsage()`, `HistoryStore.fullImage(for:)`, `HistoryStore.items`, `HistoryStore.remove(_:)`, `HistoryStore.thumbnail(for:)`, `HistoryStore.togglePin(_:)`, `HistoryStore.usage` |
+| Popup | Storage | `HistoryStore.clear(keepPinned:)`, `HistoryStore.fullImage(for:)`, `HistoryStore.items`, `HistoryStore.remove(_:)`, `HistoryStore.thumbnail(for:)`, `HistoryStore.togglePin(_:)`, `HistoryStore.totalBytes`, `HistoryStore.usage` |
 | Popup | Support | `Memory.relieve()` |
 | Settings | Capture | `ScreenshotWatcher.folder` |
 | Settings | Output | `Paster.hasAccessibility`, `Paster.openAccessibilitySettings()`, `Paster.requestAccessibility()` |

@@ -55,10 +55,9 @@ struct HistoryView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 1) {
-                    ForEach(Array(model.visible.enumerated()), id: \.element.id) { index, item in
+                    ForEach(model.visible) { item in
                         ClipRow(
                             item: item,
-                            index: index,
                             isSelected: item.id == model.selectedID,
                             appIcon: model.appIcon(for: item),
                             thumbnail: item.kind == .image || item.kind == .video ? model.store.thumbnail(for: item) : nil,
@@ -104,17 +103,17 @@ struct HistoryView: View {
             let usage = model.store.usage
             UsageIndicator(used: usage.used, limit: usage.limit)
             if !model.store.items.isEmpty {
-                Text(ByteSize.format(model.diskBytes))
+                Text(ByteSize.format(Int64(model.store.totalBytes)))
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
-                    .help("Disk space used by the history, including images and thumbnails")
+                    .help("Total size of all copied items")
             }
             if !model.query.isEmpty {
                 Text("\(model.visible.count) found")
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button("Clear") { model.clear() }
+            Button { model.clear() } label: { Image(systemName: "trash") }
                 .help("Delete all unpinned items")
             Button { model.onOpenSettings?() } label: { Image(systemName: "gearshape") }
                 .help("Settings (⌘,)")
@@ -163,7 +162,6 @@ private struct UsageIndicator: View {
 
 struct ClipRow: View {
     let item: ClipItem
-    let index: Int
     let isSelected: Bool
     let appIcon: NSImage?
     let thumbnail: NSImage?
@@ -213,11 +211,6 @@ struct ClipRow: View {
                     .font(.system(size: 11).monospacedDigit())
                     .opacity(0.55)
                     .help("Size of the copied data, all formats included")
-            }
-            if index < 9 {
-                Text("⌘\(index + 1)")
-                    .font(.system(size: 11).monospacedDigit())
-                    .opacity(0.55)
             }
             if let onPreview {
                 Button(action: onPreview) {

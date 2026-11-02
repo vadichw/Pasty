@@ -49,7 +49,7 @@ Screen recordings are stored as links to the file — if you delete the video, i
 | ↩ | Paste |
 | ⇧↩ | Paste without formatting |
 | ⌥↩ | Copy only (no paste) |
-| ⌘1 … ⌘9 | Select item by number |
+| ⌘1 … ⌘9 | Paste one of the first nine items |
 | ⌘P | Pin / unpin |
 | ⌘Y | Preview image (also the eye button) |
 | ⌥⌫ | Delete item |
@@ -57,6 +57,73 @@ Screen recordings are stored as links to the file — if you delete the video, i
 | ⌘, | Settings |
 
 Click the menu bar icon for the history, right-click for the menu (pause, clear, settings, quit).
+
+## How it works
+
+Where data comes from and where it goes:
+
+```mermaid
+flowchart LR
+    subgraph mac["macOS"]
+        CB[("Clipboard")]
+        SF[/"Screenshot folder"/]
+        FA["App you are typing in"]
+    end
+
+    subgraph capture["Capture"]
+        CM["ClipboardMonitor<br/>checks every 0.5 s"]
+        SW["ScreenshotWatcher<br/>waits until the file is written"]
+    end
+
+    HS[("Storage · HistoryStore<br/>history.json + items/")]
+
+    subgraph ui["Popup"]
+        PC["History panel<br/>search · select · preview"]
+    end
+
+    HK["⇧⌘C · Input"] --> AD
+    MB["Menu bar icon"] --> AD
+    AD["App · AppDelegate"]
+    PS["Output · Paster"]
+    ST["Settings"]
+
+    CB -- "changed?" --> CM
+    SF -- "new image / video" --> SW --> AD
+    AD -- "record screenshot" --> CM
+    CM -- "passwords, paused, ignored apps,<br/>&gt; 50 MB: skipped" --> X(("not saved"))
+    CM -- "add item" --> HS
+    HS -- "items" --> PC
+    AD -- "open" --> PC
+    PC -- "chosen item" --> AD
+    AD -- "write item" --> PS --> CB
+    PS -- "⌘V" --> FA
+    ST -. "read by every module" .-> CM
+```
+
+What happens when you pick an item:
+
+```mermaid
+sequenceDiagram
+    actor You
+    participant Popup
+    participant App as AppDelegate
+    participant Store as HistoryStore
+    participant Paster
+    participant Monitor as ClipboardMonitor
+    participant Target as App you were typing in
+
+    You->>Popup: ⇧⌘C, find, ↩
+    Popup->>App: chosen item (+ ⇧ plain text, ⌥ copy only)
+    App->>Store: read the item's data
+    App->>Paster: put it on the clipboard
+    App->>Monitor: skip this change (don't record it again)
+    App->>Store: move the item to the top
+    App->>Paster: 0.1 s later: press ⌘V
+    Paster->>Target: ⌘V
+```
+
+Every box is described in detail — inputs, outputs, side effects, guarantees — in its module's
+README (see below).
 
 ## How the code is documented
 

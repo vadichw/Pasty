@@ -57,19 +57,6 @@ struct PopupModelTests {
         #expect(model.selectedID == c)
     }
 
-    @Test("INV-Popup-12: disk usage is refreshed when the popup opens and after deleting from it")
-    func diskUsageRefresh() {
-        let a = addText(store, "a", contents: [[plainTextType: Data(count: 100_000)]])
-        addText(store, "b", contents: [[plainTextType: Data(count: 100_000)]])
-        model.reset()
-        let full = model.diskBytes
-        #expect(full >= 200_000)
-        model.remove(item(store, a))
-        #expect(model.diskBytes < full)
-        model.clear()
-        #expect(model.diskBytes == store.diskUsage())
-    }
-
     @Test("INV-Popup-4: the selection stops at the first and last rows")
     func moveClamps() {
         let a = addText(store, "a")

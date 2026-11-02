@@ -38,8 +38,6 @@ final class PopupModel: ObservableObject {
     @Published private(set) var scrollTarget: UUID?
     /// Bumped every time the popup opens to re-focus the search field.
     @Published private(set) var focusToken = 0
-    /// Disk space taken by the history; refreshed when the popup opens and after deleting from it.
-    @Published private(set) var diskBytes: Int64 = 0
     /// The image item shown in the preview window, if any.
     @Published private(set) var previewID: UUID?
 
@@ -66,7 +64,6 @@ final class PopupModel: ObservableObject {
         selectedID = visible.first?.id
         scrollTarget = selectedID
         focusToken += 1
-        refreshDiskUsage()
     }
 
     func refilter(_ items: [ClipItem]? = nil) {
@@ -127,18 +124,12 @@ final class PopupModel: ObservableObject {
         let wasSelected = item.id == selectedID
         if item.id == previewID { closePreview() }
         store.remove(item)
-        refreshDiskUsage()
         if wasSelected { selectedID = neighbour?.id }
     }
 
     func clear() {
         closePreview()
         store.clear(keepPinned: true)
-        refreshDiskUsage()
-    }
-
-    func refreshDiskUsage() {
-        diskBytes = store.diskUsage()
     }
 
     /// Without an item (⌘Y) toggles the preview of the selected item;

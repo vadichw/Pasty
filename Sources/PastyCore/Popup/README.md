@@ -179,10 +179,8 @@ Side effects: none
 
 ### reset()
 
-Purpose: prepares the popup for opening: clears the search, selects the first item, scrolls to it, focuses the search field and refreshes the disk usage shown in the footer.
+Purpose: prepares the popup for opening: clears the search, selects the first item, scrolls to it and focuses the search field.
 Side effects: none
-Uses:
-- `HistoryStore.diskUsage()`
 
 ### refilter(_:)
 
@@ -221,29 +219,19 @@ Side effects: none
 
 ### remove(_:)
 
-Purpose: deletes the given or selected item, then refreshes the disk usage.
+Purpose: deletes the given or selected item.
 Uses:
 - `HistoryStore.remove(_:)`
-- `HistoryStore.diskUsage()`
 Side effects: none
 Invariants:
-- INV-Popup-12: the disk usage shown in the footer is fresh when the popup opens and after deleting from it.
 - INV-Popup-3: deleting the selected item selects the next one, or the previous one if it was last.
 - INV-Popup-6: deleting the previewed item closes the preview.
 
 ### clear()
 
-Purpose: closes the preview, deletes every unpinned item, then refreshes the disk usage.
+Purpose: closes the preview and deletes every unpinned item.
 Uses:
 - `HistoryStore.clear(keepPinned:)`
-- `HistoryStore.diskUsage()`
-Side effects: none
-
-### refreshDiskUsage()
-
-Purpose: re-measures the history's disk usage into `diskBytes`. Not refreshed for copies made while the popup is open (rare: the popup holds the keyboard), nor for the `history.json` save that lands 0.5 s after a change.
-Uses:
-- `HistoryStore.diskUsage()`
 Side effects: none
 
 ### togglePreview(_:)
@@ -349,7 +337,7 @@ Invariants:
 
 ## HistoryView
 
-Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, pin mark, ⌘1…⌘9 hint, eye button for images and videos, trash button), an empty state, and a footer with the fill indicator, Clear, Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel`; its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the size of the history's data on disk (`12.3 MB`, formatted by `ByteSize`; see `HistoryStore.diskUsage()`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos), Show in Finder (files), Pin/Unpin, Delete.
+Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, pin mark, size, eye button for images and videos, trash button), an empty state, and a footer with the fill indicator and three icon buttons: trash (delete all unpinned items), Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel`; its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the total size of all items (`381 KB` — the sum of the sizes shown in the rows; see `HistoryStore.totalBytes`, formatted by `ByteSize`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos), Show in Finder (files), Pin/Unpin, Delete.
 Side effects:
 - [open-external] "Show in Finder" reveals the item's files.
 - [terminate] the power button quits Pasty.
@@ -363,8 +351,8 @@ Uses:
 - `PopupModel.store`
 - `HistoryStore.thumbnail(for:)`
 - `HistoryStore.usage` — the fill indicator.
-- `HistoryStore.items` — the disk size is hidden while it is empty.
-- `PopupModel.diskBytes` — the disk usage next to it.
+- `HistoryStore.items` — the total size is hidden while it is empty.
+- `HistoryStore.totalBytes` — the total size next to it.
 - `ByteSize.format(_:)`
 - `PopupModel.appIcon(for:)`
 - `PopupModel.hover(_:)`
@@ -378,7 +366,7 @@ Uses:
 
 ## ClipRow
 
-Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the ⌘1…⌘9 hint. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
+Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the eye and trash buttons. Rows are not numbered; ⌘1…⌘9 still choose the first nine rows. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
 Side effects: none
 Uses:
 - `ByteSize.format(_:)`

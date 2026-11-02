@@ -173,15 +173,12 @@ Side effects: none
 Invariants:
 - INV-Storage-11: `usage.used` counts only unpinned items (pinned ones don't count toward the limit), and `usage.limit` is the current `historyLimit()`.
 
-### diskUsage() -> Int64
+### totalBytes: Int
 
-Purpose: how many bytes of history data are on disk: the sizes of `history.json` and every file in `items/` (data and thumbnails). File sizes, not allocated disk blocks — consistent with the items' own `byteCount`, so a nearly empty history doesn't show 4 KB per file. Finder's "on disk" can be somewhat larger.
-Side effects:
-- [disk-read] lists `items/` and reads each file's size.
+Purpose: the total size of the history for the popup's footer: the sum of every item's `byteCount` — the same numbers the list shows per item. Videos and screenshots stored as a link to their file count only what was put on the clipboard, not the file itself; thumbnails don't count.
+Side effects: none
 Invariants:
-- INV-Storage-12: adding an item with data makes `diskUsage()` grow, and removing it brings it back to where it was.
-Errors:
-- [disk-read] unreadable files and a missing `history.json` count as 0 bytes.
+- INV-Storage-15: `totalBytes` is the sum of the items' `byteCount`s, and drops by an item's size when it is removed.
 
 ### contents(for:) -> ClipContents?
 

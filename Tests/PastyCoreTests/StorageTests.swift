@@ -156,15 +156,15 @@ struct StorageTests {
         #expect(store.usage.limit == 20)
     }
 
-    @Test("INV-Storage-12: diskUsage grows with an added item and shrinks back after removing it")
-    func diskUsage() {
+    @Test("INV-Storage-15: totalBytes is the sum of the items' sizes")
+    func totalBytes() {
         let store = makeStore()
-        store.saveNow()
-        let before = store.diskUsage()
-        let id = addText(store, "big", contents: [[plainTextType: Data(count: 200_000)]])
-        #expect(store.diskUsage() >= before + 200_000)
-        store.remove(item(store, id))
-        #expect(store.diskUsage() == before)
+        #expect(store.totalBytes == 0)
+        let a = addText(store, "a", contents: [[plainTextType: Data(count: 100)]])
+        addText(store, "b", contents: [[plainTextType: Data(count: 250)], ["x": Data(count: 50)]])
+        #expect(store.totalBytes == 400)
+        store.remove(item(store, a))
+        #expect(store.totalBytes == 300)
     }
 
     @Test("INV-Storage-13: byteCount is the size of every format of the latest copy")

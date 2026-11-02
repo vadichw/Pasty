@@ -140,15 +140,9 @@ final class HistoryStore: ObservableObject {
         (items.lazy.filter { !$0.pinned }.count, historyLimit())
     }
 
-    /// Bytes of history data on disk: `history.json` plus every file in `items/`.
-    /// File sizes, not allocated blocks — like the items' own sizes, so a nearly empty
-    /// history doesn't show 4 KB per file.
-    func diskUsage() -> Int64 {
-        let key = URLResourceKey.fileSizeKey
-        let files = (try? fm.contentsOfDirectory(at: itemsURL, includingPropertiesForKeys: [key])) ?? []
-        return ([indexURL] + files).reduce(0) { total, url in
-            total + Int64((try? url.resourceValues(forKeys: [key]).fileSize) ?? 0)
-        }
+    /// Total size of every item in the history: the sum of their `byteCount`s.
+    var totalBytes: Int {
+        items.reduce(0) { $0 + ($1.byteCount ?? 0) }
     }
 
     func contents(for item: ClipItem) -> ClipContents? {
