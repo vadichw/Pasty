@@ -7,7 +7,7 @@ struct SettingsView: View {
     @ObservedObject var store: HistoryStore
 
     @AppStorage(Prefs.Key.historyLimit) private var historyLimit = 200
-    @AppStorage(Prefs.Key.pasteAutomatically) private var pasteAutomatically = true
+    @AppStorage(Prefs.Key.pasteAutomatically) private var pasteAutomatically = false
     @AppStorage(Prefs.Key.pastePlainByDefault) private var pastePlainByDefault = false
     @AppStorage(Prefs.Key.saveImages) private var saveImages = true
     @AppStorage(Prefs.Key.popupPosition) private var popupPosition = PopupPosition.cursor.rawValue
@@ -138,7 +138,7 @@ struct SettingsView: View {
             }
 
             Section("Keyboard shortcuts in the history popup") {
-                ShortcutRow(keys: "↩", action: "Paste selected item")
+                ShortcutRow(keys: "↩", action: pasteAutomatically ? "Paste selected item" : "Copy selected item")
                 ShortcutRow(keys: "⇧↩", action: "Paste without formatting")
                 ShortcutRow(keys: "⌥↩", action: pasteAutomatically ? "Copy only" : "Copy and paste")
                 ShortcutRow(keys: "⌘1 … ⌘9", action: "Select item by number")

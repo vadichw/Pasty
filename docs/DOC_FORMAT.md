@@ -80,8 +80,8 @@ Effects of other private helpers are folded into the member that calls them.
 
 | Category | Means | Detected from |
 |---|---|---|
-| `pasteboard-read` | reads the clipboard | `changeCount`, `pasteboardItems`, `readObjects`, `data(forType:)`, `string(forType:)` |
-| `pasteboard-write` | replaces the clipboard | `clearContents`, `writeObjects`, `setString` |
+| `pasteboard-read` | reads the clipboard | `changeCount`, `pasteboardItems`, `readObjects`, `data(forType:)`, `string(forType:)`, `NSApp.sendAction` (edit actions: paste/copy/cut) |
+| `pasteboard-write` | replaces the clipboard | `clearContents`, `writeObjects`, `setString`, `NSApp.sendAction` (edit actions) |
 | `disk-read` | reads files or folders | `Data(contentsOf:)`, `NSImage(contentsOf…)`, `AVURLAsset`, `AVPlayer(url:)`, `CGImageSourceCreateWithURL`, `fileExists`, `contentsOfDirectory`, `attributesOfItem`, `resourceValues(forKeys:)` |
 | `disk-write` | creates, changes or deletes files | `write(to:)`, `createDirectory`, `moveItem`, `removeItem` |
 | `defaults-read` | reads settings | `UserDefaults` getters, `@AppStorage` |

@@ -55,7 +55,7 @@ enum Prefs {
     static func registerDefaults() {
         defaults.register(defaults: [
             Key.historyLimit: 200,
-            Key.pasteAutomatically: true,
+            Key.pasteAutomatically: false,
             Key.pastePlainByDefault: false,
             Key.saveImages: true,
             Key.popupPosition: PopupPosition.cursor.rawValue,

@@ -16,7 +16,7 @@ Swift + AppKit + SwiftUI, no external dependencies, macOS 14+.
 - **Configurable global shortcuts** (Settings → Global Shortcuts): open history, paste last item as plain text,
   pause/resume recording, open settings. Any shortcut can be changed or removed.
 - Instant search: type several words in any order.
-- The selected item is pasted straight into the active app (simulated ⌘V).
+- Choosing an item copies it to the clipboard — press ⌘V where you want it. ⌥↩ pastes it straight into the active app; turn on "Paste automatically" in Settings to make that the default.
 - Preview copied images and screenshots at full size: the eye button next to the item, or ⌘Y.
 - Delete any item with the trash button next to it, ⌥⌫, or the context menu.
 - Pin items (⌘P) — pinned items stay on top and survive clearing.
@@ -48,8 +48,8 @@ All versions: [Releases](https://github.com/vadichw/Pasty/releases).
 Releases are built by GitHub Actions: pushing a tag like `v1.0.0` builds, tests and publishes
 `Pasty.dmg` (`.github/workflows/release.yml`).
 
-On first launch macOS asks for **Accessibility** access — it is only needed for automatic
-pasting (⌘V). Without it, selecting an item just copies it to the clipboard.
+**Accessibility** access is only needed for automatic pasting (⌥↩, or "Paste automatically" in
+Settings) — macOS asks for it the first time Pasty pastes for you. Copying works without it.
 
 To pick up screenshots it also asks for access to the screenshot folder (the Desktop by default).
 Screen recordings are stored as links to the file — if you delete the video, it can no longer be pasted.
@@ -66,9 +66,9 @@ Screen recordings are stored as links to the file — if you delete the video, i
 | ⇧⌘C | Open / close history (configurable) |
 | ↑ ↓, ⌃N ⌃P, ⌃J ⌃K | Move selection |
 | ⌘↑ ⌘↓, PgUp PgDn | Jump to top/bottom, page |
-| ↩ | Paste |
-| ⇧↩ | Paste without formatting |
-| ⌥↩ | Copy only (no paste) |
+| ↩ | Copy (paste with ⌘V) |
+| ⇧↩ | Copy without formatting |
+| ⌥↩ | Copy and paste into the active app |
 | ⌘1 … ⌘9 | Paste one of the first nine items |
 | ⌘P | Pin / unpin |
 | ⌘Y | Preview image (also the eye button) |

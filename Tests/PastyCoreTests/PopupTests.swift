@@ -215,6 +215,7 @@ extension UsesPrefs {
             let id = addText(store, "x")
             var chosen: [(plain: Bool, paste: Bool)] = []
             controller.onSelect = { _, plain, paste in chosen.append((plain, paste)) }
+            Prefs.defaults.set(true, forKey: Prefs.Key.pasteAutomatically)
 
             controller.model.select(item(store, id), modifiers: [])
             controller.model.select(item(store, id), modifiers: .shift)

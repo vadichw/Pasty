@@ -16,7 +16,7 @@ Side effects: none
 
 ## Prefs
 
-Purpose: typed access to every setting. Defaults: history size 200, paste automatically on, plain text by default off, save images on, popup at the cursor, not paused, no ignored apps, watch screenshots on, copy screenshots to the clipboard on, system screenshot folder.
+Purpose: typed access to every setting. Defaults: history size 200, paste automatically off (choosing an item only copies it; ⌥↩ pastes), plain text by default off, save images on, popup at the cursor, not paused, no ignored apps, watch screenshots on, copy screenshots to the clipboard on, system screenshot folder.
 
 ### registerDefaults()
 
@@ -31,6 +31,7 @@ Side effects:
 - [defaults-read] reads the value.
 Invariants:
 - INV-Settings-4: `historyLimit` is never below 10, whatever is stored.
+- INV-Settings-5: automatic pasting is off unless the user turns it on: by default choosing an item only copies it.
 `popupPosition` falls back to "at cursor" for unknown stored values.
 
 ### screenshotFolder, paused, ignoredApps
