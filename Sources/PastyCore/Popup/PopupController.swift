@@ -195,6 +195,20 @@ final class PopupController: NSObject, NSWindowDelegate {
         kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
     ]
 
+    /// The standard text editing shortcuts, for the search field.
+    private static func editAction(keyCode: Int, modifiers: NSEvent.ModifierFlags) -> Selector? {
+        let shift = modifiers.contains(.shift)
+        guard modifiers.subtracting([.command, .shift]).isEmpty else { return nil }
+        switch keyCode {
+        case kVK_ANSI_V where !shift: return #selector(NSText.paste(_:))
+        case kVK_ANSI_C where !shift: return #selector(NSText.copy(_:))
+        case kVK_ANSI_X where !shift: return #selector(NSText.cut(_:))
+        case kVK_ANSI_A where !shift: return #selector(NSText.selectAll(_:))
+        case kVK_ANSI_Z: return shift ? Selector(("redo:")) : Selector(("undo:"))
+        default: return nil
+        }
+    }
+
     /// Uses key codes rather than characters so shortcuts work in any keyboard layout.
     private func handleKey(_ event: NSEvent) -> Bool {
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -241,6 +255,10 @@ final class PopupController: NSObject, NSWindowDelegate {
         }
 
         guard modifiers.contains(.command) else { return false }
+        if let action = Self.editAction(keyCode: keyCode, modifiers: modifiers) {
+            // Pasty has no Edit menu, which is what normally routes ⌘V & co. to text fields.
+            return NSApp.sendAction(action, to: nil, from: nil)
+        }
         if let index = Self.digitKeys.firstIndex(of: keyCode) {
             model.select(at: index, modifiers: modifiers)
             return true

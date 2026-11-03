@@ -141,8 +141,10 @@ Uses:
 ### handleKey(_:)
 
 Purpose: the popup's keyboard shortcuts. Uses key codes, not characters, so they work in every keyboard layout. Keys it doesn't handle go to the search field.
-Keys: ⎋ closes the preview, else clears the search, else hides · ↑ ↓ (⌘ for top/bottom), PgUp PgDn (8 items), ⌃N ⌃J / ⌃P ⌃K move the selection · ↩ / keypad Enter choose (with ⇧ / ⌥ as in `choose`) · ⌥⌫ deletes · ⌘1…⌘9 choose by number · ⌘P pin · ⌘Y preview · ⌘, settings · ⌘W hide · ⌘Q quit.
+Keys: ⎋ closes the preview, else clears the search, else hides · ↑ ↓ (⌘ for top/bottom), PgUp PgDn (8 items), ⌃N ⌃J / ⌃P ⌃K move the selection · ↩ / keypad Enter choose (with ⇧ / ⌥ as in `choose`) · ⌥⌫ deletes · ⌘1…⌘9 choose by number · ⌘P pin · ⌘Y preview · ⌘, settings · ⌘W hide · ⌘Q quit · ⌘V ⌘C ⌘X ⌘A ⌘Z ⇧⌘Z edit the search text as in any text field (Pasty has no Edit menu, which is what normally delivers these to text fields).
 Side effects:
+- [pasteboard-read] ⌘V pastes the clipboard's text into the search field.
+- [pasteboard-write] ⌘C / ⌘X copy or cut the selected search text — which then lands in the history like any other copy.
 - [window] ⎋ (with nothing else to clear) and ⌘W hide the popup.
 - [event-monitor] hiding stops intercepting key presses.
 - [terminate] ⌘Q quits Pasty.

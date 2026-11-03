@@ -85,6 +85,8 @@ enum EffectRules {
         .init(.member, "clearContents", .pasteboardWrite),
         .init(.member, "writeObjects", .pasteboardWrite),
         .init(.member, "setString", .pasteboardWrite),
+        // Standard edit actions (paste:, copy:, cut:) sent through the responder chain.
+        .init(.member, "sendAction", receiver: "NSApp", .pasteboardRead, .pasteboardWrite),
 
         // Files
         .init(.initializer, "Data", firstLabel: "contentsOf", .diskRead),

@@ -38,6 +38,11 @@ extension UsesPrefs {
             #expect(Prefs.hotKey(for: .togglePause) == nil)
         }
 
+        @Test("INV-Settings-5: automatic pasting is off by default")
+        func autoPasteOffByDefault() {
+            #expect(Prefs.pasteAutomatically == false)
+        }
+
         @Test("INV-Settings-4: the history limit is never below 10", arguments: [(0, 10), (3, 10), (10, 10), (500, 500)])
         func historyLimitFloor(stored: Int, expected: Int) {
             Prefs.defaults.set(stored, forKey: Prefs.Key.historyLimit)
