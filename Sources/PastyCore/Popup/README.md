@@ -339,7 +339,7 @@ Invariants:
 
 ## HistoryView
 
-Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, pin mark, size, eye button for images and videos, trash button), an empty state, and a footer with the fill indicator and three icon buttons: trash (delete all unpinned items), Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel`; its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the total size of all items (`381 KB` — the sum of the sizes shown in the rows; see `HistoryStore.totalBytes`, formatted by `ByteSize`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos), Show in Finder (files), Pin/Unpin, Delete.
+Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, size, eye button for images and videos, pin button, trash button), an empty state, and a footer with the fill indicator and three icon buttons: trash (delete all unpinned items), Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel` (in the light appearance, darker shades of these colors, so both stay readable on the light translucent panel); its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the total size of all items (`381 KB` — the sum of the sizes shown in the rows; see `HistoryStore.totalBytes`, formatted by `ByteSize`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos), Show in Finder (files), Pin/Unpin, Delete.
 Side effects:
 - [open-external] "Show in Finder" reveals the item's files.
 - [terminate] the power button quits Pasty.
@@ -368,7 +368,7 @@ Uses:
 
 ## ClipRow
 
-Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the eye and trash buttons. Rows are not numbered; ⌘1…⌘9 still choose the first nine rows. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
+Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the eye, pin and trash buttons. The pin button pins or unpins the item: an outline when unpinned, a filled orange pin when pinned (white on a selected row). Rows are not numbered; ⌘1…⌘9 still choose the first nine rows. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
 Side effects: none
 Uses:
 - `ByteSize.format(_:)`
