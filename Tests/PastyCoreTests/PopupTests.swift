@@ -99,6 +99,37 @@ struct PopupModelTests {
         #expect(previews == [image, nil])
     }
 
+    @Test("INV-Popup-14: a video whose file is gone can't be previewed: the toggle does nothing, moving onto it closes the preview")
+    func deletedMediaHasNoPreview() throws {
+        let gone = addVideo(store, "gone")
+        let image = addImage(store, "image") // visible: image, gone
+        try FileManager.default.removeItem(atPath: try #require(item(store, gone).filePath))
+
+        #expect(PopupModel.canPreview(item(store, gone)))
+        #expect(!model.isPreviewAvailable(item(store, gone)))
+        model.togglePreview(item(store, gone))
+        #expect(model.previewID == nil)
+
+        model.reset()
+        model.togglePreview()
+        #expect(model.previewID == image)
+        model.move(1)
+        #expect(model.previewID == nil)
+    }
+
+    @Test("INV-Popup-14: a preview that is already open can still be closed after its file goes")
+    func openPreviewClosesAfterDeletion() throws {
+        let video = addVideo(store, "clip")
+        model.togglePreview(item(store, video))
+        #expect(model.previewID == video)
+        try FileManager.default.removeItem(atPath: try #require(item(store, video).filePath))
+
+        #expect(model.isPreviewAvailable(item(store, video)))
+        model.togglePreview(item(store, video))
+        #expect(model.previewID == nil)
+        #expect(!model.isPreviewAvailable(item(store, video)))
+    }
+
     @Test("INV-Popup-7: only images and videos can be previewed; ⌘Y toggles; the eye button switches or toggles")
     func previewToggling() {
         let video = addVideo(store, "clip")
