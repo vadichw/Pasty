@@ -63,6 +63,7 @@ struct HistoryView: View {
                             thumbnail: item.kind == .image || item.kind == .video ? model.store.thumbnail(for: item) : nil,
                             isPreviewed: item.id == model.previewID,
                             onPreview: PopupModel.canPreview(item) ? { model.togglePreview(item) } : nil,
+                            onTogglePin: { model.togglePin(item) },
                             onDelete: { model.remove(item) }
                         )
                         .id(item.id)
@@ -133,11 +134,19 @@ private struct UsageIndicator: View {
     let used: Int
     let limit: Int
 
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var level: UsageLevel { UsageLevel.of(used: used, limit: limit) }
+
+    /// The bright system colors are too pale on the light translucent panel.
     private var color: Color {
-        switch UsageLevel.of(used: used, limit: limit) {
-        case .low: .green
-        case .medium: .orange
-        case .high: .red
+        switch (level, colorScheme == .light) {
+        case (.low, false): .green
+        case (.medium, false): .orange
+        case (.high, false): .red
+        case (.low, true): Color(red: 21 / 255, green: 101 / 255, blue: 52 / 255)
+        case (.medium, true): Color(red: 146 / 255, green: 64 / 255, blue: 14 / 255)
+        case (.high, true): Color(red: 153 / 255, green: 27 / 255, blue: 27 / 255)
         }
     }
 
@@ -145,7 +154,7 @@ private struct UsageIndicator: View {
         let fraction = limit > 0 ? min(1, Double(used) / Double(limit)) : 1
         HStack(spacing: 6) {
             Capsule()
-                .fill(.quaternary)
+                .fill(.primary.opacity(0.2))
                 .frame(width: 44, height: 5)
                 .overlay(alignment: .leading) {
                     Capsule()
@@ -168,6 +177,7 @@ struct ClipRow: View {
     let isPreviewed: Bool
     /// Set for images only; shows the eye button.
     let onPreview: (() -> Void)?
+    let onTogglePin: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -201,11 +211,6 @@ struct ClipRow: View {
 
             Spacer(minLength: 4)
 
-            if item.pinned {
-                Image(systemName: "pin.fill")
-                    .font(.system(size: 10))
-                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.orange))
-            }
             if let byteCount = item.byteCount {
                 Text(ByteSize.format(Int64(byteCount)))
                     .font(.system(size: 11).monospacedDigit())
@@ -223,6 +228,16 @@ struct ClipRow: View {
                 .opacity(isSelected || isPreviewed ? 0.9 : 0.4)
                 .help("Preview (⌘Y)")
             }
+            Button(action: onTogglePin) {
+                Image(systemName: item.pinned ? "pin.fill" : "pin")
+                    .font(.system(size: 11))
+                    .frame(width: 18, height: 18)
+                    .contentShape(Rectangle())
+                    .foregroundStyle(item.pinned && !isSelected ? AnyShapeStyle(.orange) : AnyShapeStyle(.foreground))
+            }
+            .buttonStyle(.plain)
+            .opacity(isSelected || item.pinned ? 0.9 : 0.4)
+            .help(item.pinned ? "Unpin (⌘P)" : "Pin (⌘P)")
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .font(.system(size: 11))
