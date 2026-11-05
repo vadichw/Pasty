@@ -14,6 +14,9 @@ final class HistoryStore: ObservableObject {
     private var indexURL: URL { baseURL.appendingPathComponent("history.json") }
     private var saveScheduled = false
     private let historyLimit: () -> Int
+    /// Whether an item whose source file is gone has its own copy of the picture.
+    /// Remembered because rows ask on every redraw, and the answer means reading the data file.
+    private var hasStoredImage: [UUID: Bool] = [:]
     private let thumbnails: NSCache<NSUUID, NSImage> = {
         let cache = NSCache<NSUUID, NSImage>()
         cache.countLimit = 60
@@ -154,13 +157,34 @@ final class HistoryStore: ObservableObject {
     /// otherwise the image data stored with the item.
     func fullImage(for item: ClipItem) -> NSImage? {
         if let filePath = item.filePath, let image = NSImage(contentsOfFile: filePath) { return image }
+        return storedImageData(for: item).flatMap(NSImage.init(data:))
+    }
+
+    /// Whether the item's picture or video can still be shown: its source file exists, or,
+    /// for an image, a copy of the picture is stored with it. Videos are only ever a link.
+    func isMediaAvailable(for item: ClipItem) -> Bool {
+        guard let filePath = item.filePath, !fm.fileExists(atPath: filePath) else { return true }
+        guard item.kind == .image else { return false }
+        if let known = hasStoredImage[item.id] { return known }
+        let found = storedImageData(for: item) != nil
+        hasStoredImage[item.id] = found
+        return found
+    }
+
+    /// For an item copied as a file, only data of the file's own type is its picture:
+    /// Finder also puts the file's icon on the clipboard, as an image.
+    private func storedImageData(for item: ClipItem) -> Data? {
         guard let first = contents(for: item)?.first else { return nil }
-        let data = first.first { type, _ in UTType(type)?.conforms(to: .image) == true }?.value
-        return data.flatMap(NSImage.init(data:))
+        if let filePath = item.filePath {
+            let fileExtension = (filePath as NSString).pathExtension.lowercased()
+            return UTType(filenameExtension: fileExtension).flatMap { first[$0.identifier] }
+        }
+        return first.first { type, _ in UTType(type)?.conforms(to: .image) == true }?.value
     }
 
     func purgeCaches() {
         thumbnails.removeAllObjects()
+        hasStoredImage = [:]
     }
 
     func thumbnail(for item: ClipItem) -> NSImage? {
@@ -242,6 +266,7 @@ final class HistoryStore: ObservableObject {
     }
 
     private func writeContents(_ contents: ClipContents, for id: UUID) {
+        hasStoredImage[id] = nil
         let encoder = PropertyListEncoder()
         encoder.outputFormat = .binary
         guard let data = try? encoder.encode(contents) else { return }
@@ -252,5 +277,6 @@ final class HistoryStore: ObservableObject {
         try? fm.removeItem(at: contentsURL(id))
         try? fm.removeItem(at: thumbnailURL(id))
         thumbnails.removeObject(forKey: id as NSUUID)
+        hasStoredImage[id] = nil
     }
 }

@@ -196,11 +196,13 @@ Invariants:
 
 ### move(_:), moveToEdge(top:)
 
-Purpose: moves the selection by a number of rows, or to the first/last row, and scrolls to it. If the preview is open, it follows: it switches to the new item if it can be previewed (see `canPreview`), and closes otherwise.
+Purpose: moves the selection by a number of rows, or to the first/last row, and scrolls to it. If the preview is open, it follows: it switches to the new item if its preview is available (see `isPreviewAvailable`), and closes otherwise.
 Side effects: none
+Uses:
+- `HistoryStore.isMediaAvailable(for:)`
 Invariants:
 - INV-Popup-4: the selection never moves past the first or last row.
-- INV-Popup-5: with the preview open, moving onto an image or video previews it; moving onto anything else closes the preview.
+- INV-Popup-5: with the preview open, moving onto an image or video whose preview is available previews it; moving onto anything else closes the preview.
 
 ### hover(_:)
 
@@ -238,15 +240,26 @@ Side effects: none
 
 ### togglePreview(_:)
 
-Purpose: without an item (⌘Y): closes the open preview, or opens the selected item's. With an item (the eye button): toggles that item's preview, or switches to it. Only images and videos can be previewed; for other items it does nothing.
+Purpose: without an item (⌘Y): closes the open preview, or opens the selected item's. With an item (the eye button): toggles that item's preview, or switches to it. Only images and videos can be previewed, and only while what they would show still exists; for other items it does nothing.
 Side effects: none
+Uses:
+- `HistoryStore.isMediaAvailable(for:)`
 Invariants:
-- INV-Popup-7: only images and videos can be previewed; ⌘Y closes an open preview, otherwise opens the selected item's.
+- INV-Popup-7: only images and videos can be previewed; ⌘Y closes an open preview, otherwise opens the selected item's if it is available.
 
 ### canPreview(_:) -> Bool
 
 Purpose: whether an item has a preview: images (shown full size) and videos (played).
 Side effects: none
+
+### isPreviewAvailable(_:) -> Bool
+
+Purpose: whether to offer an item's preview: `canPreview`, and either it is the preview open right now (so it can still be closed after its file is deleted) or `HistoryStore.isMediaAvailable(for:)` says its source still exists. A file that exists but can't be decoded still counts; opening it then beeps and closes (see `PopupController.showPreview`).
+Uses:
+- `HistoryStore.isMediaAvailable(for:)`
+Side effects: none
+Invariants:
+- INV-Popup-14: a video whose file is gone has no preview: `togglePreview` does nothing for it, and moving onto it closes an open preview. If its preview is already open when the file goes, it can still be closed.
 
 ### closePreview()
 
@@ -339,7 +352,7 @@ Invariants:
 
 ## HistoryView
 
-Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, size, eye button for images and videos, pin button, trash button), an empty state, and a footer with the fill indicator and three icon buttons: trash (delete all unpinned items), Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel` (in the light appearance, darker shades of these colors, so both stay readable on the light translucent panel); its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the total size of all items (`381 KB` — the sum of the sizes shown in the rows; see `HistoryStore.totalBytes`, formatted by `ByteSize`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos), Show in Finder (files), Pin/Unpin, Delete.
+Purpose: the popup's content: the search field, the list (app icon, thumbnail or one-line text, size, eye button for images and videos, pin button, trash button), an empty state, and a footer with the fill indicator and three icon buttons: trash (delete all unpinned items), Settings and Quit. The fill indicator shows "used/limit" (e.g. `20/2000`) with a small bar, both green, orange or red by `UsageLevel` (in the light appearance, darker shades of these colors, so both stay readable on the light translucent panel); its tooltip explains that the oldest unpinned items are deleted when it is full. Next to it, in grey, the total size of all items (`381 KB` — the sum of the sizes shown in the rows; see `HistoryStore.totalBytes`, formatted by `ByteSize`); hidden while the history is empty. While searching, the footer also shows "N found". Each row has a context menu: Paste, Paste as Plain Text (text), Copy Only, Preview (images and videos; disabled when `isPreviewAvailable` is false), Show in Finder (files), Pin/Unpin, Delete.
 Side effects:
 - [open-external] "Show in Finder" reveals the item's files.
 - [terminate] the power button quits Pasty.
@@ -362,13 +375,14 @@ Uses:
 - `PopupModel.togglePin(_:)`
 - `PopupModel.togglePreview(_:)`
 - `PopupModel.canPreview(_:)`
+- `PopupModel.isPreviewAvailable(_:)`
 - `PopupModel.remove(_:)`
 - `PopupModel.clear()`
 - `PopupModel.onOpenSettings`
 
 ## ClipRow
 
-Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the eye, pin and trash buttons. The pin button pins or unpins the item: an outline when unpinned, a filled orange pin when pinned (white on a selected row). Rows are not numbered; ⌘1…⌘9 still choose the first nine rows. Selected rows are highlighted with the accent color; the tooltip shows up to 1500 characters of the item's text.
+Purpose: one row of the list. Besides the content it shows the item's size in grey (`byteCount`, e.g. `368 B` or `1.2 MB`; tooltip "Size of the copied data, all formats included") before the eye, pin and trash buttons. The eye button is shown for images and videos; when what it would show is gone (`isPreviewAvailable` is false) it is faint and does nothing; hovering it shows "Can't preview: the file was moved or deleted" in a label drawn in the row, to the left of the icon (not a system tooltip, which needs an active app), and a click on it does not choose the row. The pin button pins or unpins the item: an outline when unpinned, a filled orange pin when pinned (white on a selected row). Rows are not numbered; ⌘1…⌘9 still choose the first nine rows. Selected rows are highlighted with the accent color; hovering the icon, thumbnail or text shows up to 1500 characters of the item's text; the size and the buttons have their own tooltips.
 Side effects: none
 Uses:
 - `ByteSize.format(_:)`

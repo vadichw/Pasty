@@ -51,7 +51,8 @@ func addImage(_ store: HistoryStore, _ name: String, width: Int = 4, height: Int
 @MainActor @discardableResult
 func addVideo(_ store: HistoryStore, _ name: String) -> UUID {
     usleep(1000)
-    let path = "/tmp/\(name).mov"
+    let path = temporaryDirectory().appendingPathComponent("\(name).mov").path
+    FileManager.default.createFile(atPath: path, contents: Data())
     return store.add(kind: .video, text: name, hash: HistoryStore.hash("file:" + path),
                      contents: [[NSPasteboard.PasteboardType.fileURL.rawValue: Data("file://\(path)".utf8)]],
                      appBundleID: nil, thumbnail: nil, filePath: path)

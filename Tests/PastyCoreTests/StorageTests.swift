@@ -196,6 +196,69 @@ struct StorageTests {
         #expect(item(reloaded, big).byteCount == fileSize)
     }
 
+    @Test("INV-Storage-16: media is available while its file exists; after that only images with their own stored copy")
+    func mediaAvailability() throws {
+        let store = makeStore()
+        let folder = temporaryDirectory()
+        func add(_ kind: ClipItem.Kind, _ name: String, contents: ClipContents) throws -> (ClipItem, URL) {
+            let file = folder.appendingPathComponent(name)
+            try Data("x".utf8).write(to: file)
+            let id = store.add(kind: kind, text: name, hash: "file:" + file.path, contents: contents,
+                               appBundleID: nil, thumbnail: nil, filePath: file.path)
+            return (item(store, id), file)
+        }
+        let png = NSPasteboard.PasteboardType.png.rawValue
+        let (video, videoFile) = try add(.video, "clip.mov", contents: [["public.file-url": Data()]])
+        let (shot, shotFile) = try add(.image, "shot.png", contents: [[png: pngData(width: 2, height: 2)]])
+        let (finder, finderFile) = try add(.image, "photo.png", contents: [["public.tiff": Data("icon".utf8)]])
+        let pasted = addImage(store, "from a browser")
+
+        for clip in [video, shot, finder, item(store, pasted)] {
+            #expect(store.isMediaAvailable(for: clip))
+        }
+        for file in [videoFile, shotFile, finderFile] { try FileManager.default.removeItem(at: file) }
+
+        #expect(!store.isMediaAvailable(for: video))
+        #expect(store.isMediaAvailable(for: shot))
+        #expect(!store.isMediaAvailable(for: finder))
+        #expect(store.isMediaAvailable(for: item(store, pasted)))
+
+        // The remembered "no" is dropped when the item's data changes.
+        store.add(kind: .image, text: "photo.png", hash: "file:" + finderFile.path,
+                  contents: [[png: pngData(width: 2, height: 2)]], appBundleID: nil, thumbnail: nil,
+                  filePath: finderFile.path)
+        #expect(store.isMediaAvailable(for: finder))
+
+        // A video is only a link: stored data of its own type doesn't make it available.
+        let movie = folder.appendingPathComponent("movie.mov")
+        let linked = store.add(kind: .video, text: "movie.mov", hash: "file:" + movie.path,
+                               contents: [["com.apple.quicktime-movie": Data("x".utf8)]],
+                               appBundleID: nil, thumbnail: nil, filePath: movie.path)
+        #expect(!store.isMediaAvailable(for: item(store, linked)))
+    }
+
+    @Test("INV-Storage-16: a screenshot's stored copy is found under the type its extension maps to")
+    func jpegStoredCopy() {
+        let store = makeStore()
+        let path = temporaryDirectory().appendingPathComponent("shot.JPG").path
+        let id = store.add(kind: .image, text: "shot.JPG", hash: "file:" + path,
+                           contents: [["public.jpeg": Data("x".utf8)]], appBundleID: nil, thumbnail: nil, filePath: path)
+        #expect(store.isMediaAvailable(for: item(store, id)))
+    }
+
+    @Test("INV-Storage-17: fullImage never shows the file icon Finder puts on the clipboard")
+    func fullImageIgnoresFinderIcon() throws {
+        let store = makeStore()
+        let file = temporaryDirectory().appendingPathComponent("photo.png")
+        try pngData(width: 30, height: 20).write(to: file)
+        let icon = pngData(width: 512, height: 512)
+        let id = store.add(kind: .image, text: "photo.png", hash: "file:" + file.path,
+                           contents: [["public.tiff": icon]], appBundleID: nil, thumbnail: nil, filePath: file.path)
+        #expect(store.fullImage(for: item(store, id))?.representations.first?.pixelsWide == 30)
+        try FileManager.default.removeItem(at: file)
+        #expect(store.fullImage(for: item(store, id)) == nil)
+    }
+
     @Test("INV-Storage-10: fullImage prefers the source file and falls back to the stored data")
     func fullImageSources() throws {
         let store = makeStore()

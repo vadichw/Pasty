@@ -62,6 +62,7 @@ struct HistoryView: View {
                             appIcon: model.appIcon(for: item),
                             thumbnail: item.kind == .image || item.kind == .video ? model.store.thumbnail(for: item) : nil,
                             isPreviewed: item.id == model.previewID,
+                            isPreviewAvailable: model.isPreviewAvailable(item),
                             onPreview: PopupModel.canPreview(item) ? { model.togglePreview(item) } : nil,
                             onTogglePin: { model.togglePin(item) },
                             onDelete: { model.remove(item) }
@@ -91,6 +92,7 @@ struct HistoryView: View {
         Divider()
         if PopupModel.canPreview(item) {
             Button(item.id == model.previewID ? "Close Preview" : "Preview") { model.togglePreview(item) }
+                .disabled(!model.isPreviewAvailable(item))
         }
         if !item.fileURLs.isEmpty {
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting(item.fileURLs) }
@@ -175,39 +177,45 @@ struct ClipRow: View {
     let appIcon: NSImage?
     let thumbnail: NSImage?
     let isPreviewed: Bool
-    /// Set for images only; shows the eye button.
+    let isPreviewAvailable: Bool
+    /// Set for images and videos; shows the eye button.
     let onPreview: (() -> Void)?
     let onTogglePin: () -> Void
     let onDelete: () -> Void
 
+    @State private var isHoveringUnavailablePreview = false
+
     var body: some View {
         HStack(spacing: 8) {
-            icon
-                .frame(width: 18, height: 18)
+            HStack(spacing: 8) {
+                icon
+                    .frame(width: 18, height: 18)
 
-            if let thumbnail {
-                Image(nsImage: thumbnail)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 120, maxHeight: 48, alignment: .leading)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .overlay {
-                        if item.kind == .video {
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 18))
-                                .foregroundStyle(.white, .black.opacity(0.45))
+                if let thumbnail {
+                    Image(nsImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: 120, maxHeight: 48, alignment: .leading)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay {
+                            if item.kind == .video {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(.white, .black.opacity(0.45))
+                            }
                         }
-                    }
-                Text(item.text)
-                    .font(.system(size: 11))
-                    .lineLimit(2)
-                    .truncationMode(.middle)
-                    .opacity(0.7)
-            } else {
-                Text(item.title)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                    Text(item.text)
+                        .font(.system(size: 11))
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                        .opacity(0.7)
+                } else {
+                    Text(item.title)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
             }
+            .help(String(item.text.prefix(1500)))
 
             Spacer(minLength: 4)
 
@@ -218,15 +226,42 @@ struct ClipRow: View {
                     .help("Size of the copied data, all formats included")
             }
             if let onPreview {
-                Button(action: onPreview) {
-                    Image(systemName: isPreviewed ? "eye.fill" : "eye")
+                if isPreviewAvailable {
+                    Button(action: onPreview) {
+                        Image(systemName: isPreviewed ? "eye.fill" : "eye")
+                            .font(.system(size: 11))
+                            .frame(width: 18, height: 18)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .opacity(isSelected || isPreviewed ? 0.9 : 0.4)
+                    .help("Preview (⌘Y)")
+                } else {
+                    // Not a disabled button: a click on it would fall through and choose the row.
+                    Image(systemName: "eye")
                         .font(.system(size: 11))
                         .frame(width: 18, height: 18)
                         .contentShape(Rectangle())
+                        .opacity(isSelected ? 0.35 : 0.15)
+                        .onTapGesture {}
+                        .onHover { isHoveringUnavailablePreview = $0 }
+                        .overlay(alignment: .trailing) {
+                            // Drawn here rather than with `.help`: system tooltips need an active
+                            // app, and the popup deliberately doesn't activate Pasty.
+                            if isHoveringUnavailablePreview {
+                                Text("Can't preview: the file was moved or deleted")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.primary)
+                                    .fixedSize()
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 5))
+                                    .shadow(radius: 2)
+                                    .offset(x: -24)
+                                    .allowsHitTesting(false)
+                            }
+                        }
                 }
-                .buttonStyle(.plain)
-                .opacity(isSelected || isPreviewed ? 0.9 : 0.4)
-                .help("Preview (⌘Y)")
             }
             Button(action: onTogglePin) {
                 Image(systemName: item.pinned ? "pin.fill" : "pin")
@@ -258,7 +293,6 @@ struct ClipRow: View {
                 .fill(isSelected ? Color.accentColor : Color.clear)
         )
         .contentShape(Rectangle())
-        .help(String(item.text.prefix(1500)))
     }
 
     @ViewBuilder

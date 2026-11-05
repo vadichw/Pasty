@@ -192,17 +192,28 @@ Errors:
 ### fullImage(for:) -> NSImage?
 
 Purpose: the full-size picture for the image preview.
-Output: the image from the item's source file if it still exists; otherwise the first image-typed data (PNG, TIFF, …) in the stored contents; otherwise nil.
+Output: the image from the item's source file if it still exists; otherwise the picture stored with the item; otherwise nil. For an item with a source file, only stored data of the file's own type counts as its picture (`shot.png` → PNG data), because Finder also puts the file's icon on the clipboard as an image. Two consequences: a `.tiff` file copied in Finder still shows its icon, since the icon has the same type as the file; and a picture stored in another format than its file (`photo.jpg` with PNG data) is not used. For an item without a source file, it is any one image-typed format from the stored contents (which one is arbitrary when there are several).
 Side effects:
 - [disk-read] reads the source file, then `items/<id>.plist` if needed.
 Invariants:
 - INV-Storage-10: `fullImage` prefers the source file; when it is gone, it falls back to the image data stored with the item.
+- INV-Storage-17: once its source file is gone, an item with a source file only shows stored data of the file's own type: other image data, such as the icon Finder adds to a copied PNG, gives nil.
 Errors:
 - [disk-read] unreadable files fall through to the next source; nil when none works.
 
+### isMediaAvailable(for:) -> Bool
+
+Purpose: whether an item's picture or video can still be shown, for the preview (eye) button. True when it has no source file or the file exists. When the file is gone: false for videos (they are only a link to the file); for images, whether stored data of the file's own type exists — normally yes for screenshots up to 50 MB and no for images copied as a file in Finder (exceptions: a `.tiff` copied in Finder, whose icon has that type, and a screenshot later re-copied in Finder, which replaces its stored data). It doesn't check that the data decodes.
+Side effects:
+- [disk-read] checks that the source file exists; if it is gone and the item is an image, reads `items/<id>.plist` once and remembers the answer until the item's data changes or the caches are purged.
+Invariants:
+- INV-Storage-16: media is available while its file exists; once it is gone, only images with stored data of the file's own type are. The remembered answer is dropped when the item's data changes.
+Errors:
+- [disk-read] an unreadable data file counts as "no stored picture".
+
 ### purgeCaches()
 
-Purpose: drops all decoded thumbnails from memory (called when the popup is torn down).
+Purpose: drops the decoded thumbnails and the remembered `isMediaAvailable` answers from memory (called when the popup is torn down).
 Side effects: none
 
 ### thumbnail(for:) -> NSImage?

@@ -86,7 +86,7 @@ final class PopupModel: ObservableObject {
         lastKeyboardNavigation = Date()
         // Like Quick Look: the open preview follows the keyboard selection.
         if previewID != nil, let item = selected {
-            Self.canPreview(item) ? showPreview(item) : closePreview()
+            isPreviewAvailable(item) ? showPreview(item) : closePreview()
         }
     }
 
@@ -136,13 +136,19 @@ final class PopupModel: ObservableObject {
     /// with one (the eye button) toggles that item's preview.
     func togglePreview(_ item: ClipItem? = nil) {
         if previewID != nil, item == nil || item?.id == previewID { return closePreview() }
-        guard let item = item ?? selected, Self.canPreview(item) else { return }
+        guard let item = item ?? selected, isPreviewAvailable(item) else { return }
         showPreview(item)
     }
 
     /// Images show full size; videos play.
     static func canPreview(_ item: ClipItem) -> Bool {
         item.kind == .image || item.kind == .video
+    }
+
+    /// Has a kind of preview, and what it would show still exists.
+    /// An open preview counts, so it can still be closed after its file is deleted.
+    func isPreviewAvailable(_ item: ClipItem) -> Bool {
+        Self.canPreview(item) && (item.id == previewID || store.isMediaAvailable(for: item))
     }
 
     func closePreview() {

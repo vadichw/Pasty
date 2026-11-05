@@ -138,7 +138,7 @@ Side effects:
 Uses:
 - `PopupController.isVisible`
 - `PopupController.tearDown()`
-- `HistoryStore.purgeCaches()` — drops cached thumbnails.
+- `HistoryStore.purgeCaches()` — drops cached thumbnails and media availability answers.
 - `Memory.relieve()`
 
 ### statusItemClicked(_:)
