@@ -233,7 +233,7 @@ struct ClipRow: View {
                     .font(.system(size: 11))
                     .frame(width: 18, height: 18)
                     .contentShape(Rectangle())
-                    .foregroundStyle(item.pinned && !isSelected ? AnyShapeStyle(.orange) : AnyShapeStyle(.foreground))
+                    .foregroundStyle(isSelected ? AnyShapeStyle(.white) : item.pinned ? AnyShapeStyle(.orange) : AnyShapeStyle(.primary))
             }
             .buttonStyle(.plain)
             .opacity(isSelected || item.pinned ? 0.9 : 0.4)
